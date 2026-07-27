@@ -2,6 +2,28 @@
 
 These are prompts you can paste into Claude Desktop (with `workspace-mcp` connected) to see the tools in action. All of them result in real files on disk inside your configured `workspace_root`.
 
+---
+
+## 🌟 Master Prompt (Full-Potential Demonstration)
+
+Copy and paste this master prompt into Claude Desktop to exercise all major Workspace MCP tool capabilities in a single flow:
+
+```text
+Using the workspace MCP, create a new project called [project-name]. Set up the following structure: create a src/ directory, add starter files inside it ([file1], [file2]), and create a top-level README.md and .gitignore.
+
+Once the files exist, append a notes section to the README, then update [file1] with the core logic for [feature].
+
+Search the project for any TODO or FIXME comments using find_text. Find all files matching *.[ext] using search_files.
+
+Rename [file2] to [new-name], then move it into a new docs/ directory.
+
+Generate the project tree, generate a proper README, and generate a CLOUD.md log summarizing what was built.
+
+Finally, validate the workspace configuration, and list the contents of the project root to confirm everything is in place.
+```
+
+---
+
 ## 1. Scaffold a full-stack project
 
 > Using the workspace tools, create a project called "ExpenseTracker" — a FastAPI backend with a `/expenses` REST API and a React frontend for viewing/adding expenses. Create the full folder structure, write starter code for both the backend and frontend, and generate the README and CLOUD.md when you're done.

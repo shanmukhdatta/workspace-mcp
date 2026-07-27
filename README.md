@@ -100,6 +100,35 @@ Paste the following JSON block into your `claude_desktop_config.json` file. Upda
 
 ## 🛠️ How We Use It (Workflow & Prompts)
 
+### 🌟 Full-Potential Master Prompt (Unleash All 22 Tools)
+
+To exercise the complete capabilities of Workspace MCP in Claude Desktop, copy and paste this master prompt:
+
+```text
+Using the workspace MCP, create a new project called [project-name]. Set up the following structure: create a src/ directory, add starter files inside it ([file1], [file2]), and create a top-level README.md and .gitignore.
+
+Once the files exist, append a notes section to the README, then update [file1] with the core logic for [feature].
+
+Search the project for any TODO or FIXME comments using find_text. Find all files matching *.[ext] using search_files.
+
+Rename [file2] to [new-name], then move it into a new docs/ directory.
+
+Generate the project tree, generate a proper README, and generate a CLOUD.md log summarizing what was built.
+
+Finally, validate the workspace configuration, and list the contents of the project root to confirm everything is in place.
+```
+
+#### 🔍 What Tools This Master Prompt Exercises:
+1. `create_project` / `create_directory` — Initializes project and directory hierarchy.
+2. `create_file` — Creates `src/[file1]`, `src/[file2]`, top-level `README.md`, `.gitignore`.
+3. `append_file` & `update_file` — Appends notes section to `README.md` and updates `[file1]` with feature logic.
+4. `find_text` & `search_files` — Searches code for `TODO`/`FIXME` comments and matches extensions (`*.py`, `*.ts`, etc.).
+5. `rename_file` & `move_file` — Renames `[file2]` to `[new-name]` and moves it into `docs/`.
+6. `generate_project_tree`, `generate_readme`, `generate_cloud_log` — Formats and writes documentation artifacts (`PROJECT_TREE.md`, `README.md`, `CLOUD.md`).
+7. `validate_workspace` & `list_directory` — Verifies workspace configuration health and lists root contents.
+
+---
+
 ### Workflow 1: Building Full Applications
 Ask Claude Desktop to scaffold a complete project:
 
