@@ -28,6 +28,113 @@ With **Workspace MCP**, Claude writes files **directly to your local filesystem*
 
 ---
 
+## 💡 Capabilities Guide — What is this, really?
+
+Think of **workspace-mcp** as giving an AI assistant *hands* inside a project folder on disk. Without it, an AI can only talk to you about code — you'd have to copy-paste files back and forth manually. With it, the AI can directly create, read, edit, organize, and document real files and folders, the same way a developer would using a file explorer and a terminal.
+
+It does **not** write your logic for you by magic, and it's **not** a game engine, compiler, or database. It's a **file and project management layer**. The "intelligence" (writing the actual logic, API code, etc.) still comes from the AI reasoning about your request — **workspace-mcp** is what lets that reasoning turn into real files on your machine, cleanly organized.
+
+---
+
+### The Core Idea: 4 Categories of Power
+
+Every tool in **workspace-mcp** falls into one of these four buckets:
+
+| Category | What it means in plain English |
+|---|---|
+| 🗂️ **Project & Folder Management** | Creating, renaming, deleting entire projects or folders |
+| 📄 **File Operations** | Creating, reading, editing, moving, renaming, deleting individual files |
+| 🔍 **Search & Discovery** | Finding files or text across a whole project without manually digging |
+| 📝 **Auto-Documentation** | Generating README, project trees, and work logs automatically |
+
+---
+
+### 1. 🗂️ Project & Folder Management
+
+This is the "scaffolding" layer — setting up the skeleton before anything gets built.
+
+- **`create_project`** — Starts a brand-new project folder with a sensible structure. This is usually the *first* thing you do.
+- **`create_directory`** — Adds a subfolder inside a project (e.g. `src/`, `assets/`, `docs/`). Creates parent folders automatically if they don't exist yet.
+- **`rename_project`** — Renames (moves) an entire project.
+- **`delete_directory`** — Removes a folder and everything inside it. Permanent — use with care.
+- **`delete_project`** — Wipes an entire project. Also permanent.
+
+> 💡 **Beginner tip:** Always start a new piece of work with `create_project`. It keeps everything organized instead of scattering files around loosely.
+
+---
+
+### 2. 📄 File Operations
+
+This is where actual content gets written.
+
+- **`create_file`** — Makes a brand-new file with content (fails if the file already exists — this is a safety net against accidentally overwriting work).
+- **`write_file`** — Overwrites a file's *entire* content, or creates it if it doesn't exist yet. Use this when you want a clean slate.
+- **`update_file`** — Edits *part* of an existing file (like changing one function) without touching the rest.
+- **`append_file`** — Adds text to the *end* of a file, without touching what's already there (great for logs or growing notes).
+- **`read_file`** — Reads a file's full content back to you.
+- **`move_file`** — Moves a file to a different folder (can rename it at the same time).
+- **`rename_file`** — Renames a file, keeping it in the same folder.
+- **`delete_file`** — Permanently deletes a single file.
+
+> 💡 **Beginner tip:** `create_file` vs `write_file` vs `update_file` is the most common confusion:
+> - Brand new file → `create_file`
+> - Replace everything in an existing file → `write_file`
+> - Change just one part → `update_file`
+
+---
+
+### 3. 🔍 Search & Discovery
+
+Once a project has more than a couple of files, you need to *find* things instead of remembering where everything is.
+
+- **`find_text`** — Searches file *contents* for a literal string (like grep). Great for finding all `TODO` comments, or every place a function is used.
+- **`search_files`** — Finds files by *name pattern* (e.g. all `.js` files, or anything named `test_*`).
+- **`list_directory`** — Shows what's immediately inside a folder (like `ls`).
+
+> 💡 **Beginner tip:** Use `search_files` when you know *what kind* of file you want but not *where* it is. Use `find_text` when you know *what text* you're looking for but not *which file* it's in.
+
+---
+
+### 4. 📝 Auto-Documentation & Introspection
+
+This is the layer that keeps a project understandable — for you, teammates, or your future self.
+
+- **`generate_readme`** — Auto-writes a proper `README.md` for the project (sections like setup, usage, structure).
+- **`generate_project_tree`** — Creates a saved `PROJECT_TREE.md` — a visual ASCII map of every file and folder.
+- **`project_tree`** — Same idea, but just *shows* it to you without saving it to disk.
+- **`generate_cloud_log`** — Creates `CLOUD.md`, a plain-English log explaining what the AI actually built and *why* — useful for tracking AI-assisted work over time.
+- **`validate_path`** — Checks if a given file path is valid and safe before you use it.
+- **`validate_workspace`** — Reports on the overall health of the workspace (root location, config, etc.).
+
+> 💡 **Beginner tip:** Run `generate_readme` + `generate_project_tree` + `generate_cloud_log` near the *end* of a work session — they document what was just built, so it's most accurate then.
+
+---
+
+### 🔄 A Typical Full Workflow
+
+```
+1. create_project        → set up "my-app/"
+2. create_directory      → add "src/", "docs/"
+3. create_file           → write starter files
+4. update_file           → refine logic as you go
+5. find_text/search_files→ check for TODOs, locate files
+6. move_file/rename_file → tidy up structure
+7. generate_project_tree → snapshot the layout
+8. generate_readme       → document it
+9. generate_cloud_log    → log what was done
+10. validate_workspace   → sanity-check everything
+```
+
+---
+
+### 🧠 Key Mental Model to Remember
+
+> **workspace-mcp doesn't think for you — it acts on disk for you.**
+>
+> The AI still does the reasoning (what code to write, how to structure a game or API, etc.). Workspace-mcp is the hands that turn that reasoning into an organized, documented, real project folder — instead of a wall of code pasted into a chat window that you'd have to assemble yourself.
+
+---
+
 ## 🔌 How to Connect to Claude Desktop
 
 ### Why Use `uv` for Automatic Server Execution?
