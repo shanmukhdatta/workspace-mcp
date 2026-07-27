@@ -1,6 +1,6 @@
 # Workspace MCP
 
-> A production-ready Model Context Protocol (MCP) server for exploring, indexing, analyzing, and scaffolding large codebases with AI assistants.
+> **The local filesystem bridge for Claude Desktop & Claude Code.** Stop losing code to token limits — let Claude design, build, and save full-stack software projects directly on your hard drive.
 
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -8,186 +8,48 @@
 [![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-purple.svg)](https://modelcontextprotocol.io)
 [![CI Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](.github/workflows/ci.yml)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Stars](https://img.shields.io/github/stars/shanmukhdatta/workspace-mcp?style=social)](https://github.com/shanmukhdatta/workspace-mcp)
-[![Issues](https://img.shields.io/github/issues/shanmukhdatta/workspace-mcp)](https://github.com/shanmukhdatta/workspace-mcp/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/shanmukhdatta/workspace-mcp)](https://github.com/shanmukhdatta/workspace-mcp/pulls)
 
 ---
 
-## 🚀 Features
+## 🎯 The Token Limit Problem & How Workspace MCP Solves It
 
-- **AI-Powered Codebase Exploration & Code Understanding**: Navigate and analyze large codebases effortlessly with your favorite AI assistants.
-- **Fast File Indexing & Repository Indexing**: Discover files instantly via pattern matching (`search_files`) and fast literal text search (`find_text`).
-- **22 Production-Ready MCP Tools**: Granular file, directory, project, search, documentation, and validation capabilities exposed over standardized MCP stdio/SSE protocols.
-- **Strict Security Sandbox**: Anti-traversal security engine utilizing `os.path.realpath` to enforce single-workspace isolation, preventing relative path escapes (`..`), symlink exploits, and OS reserved device file attacks (`CON`, `NUL`, etc.).
-- **Confirmation-Gated Destructive Operations**: Accidental data loss prevention through required explicit confirmation flags (`confirm=true` / `overwrite=true`) on file write/delete operations.
-- **Auto-Generated Project Documentation**: Automated creation and synchronization of `README.md`, `CLOUD.md` (AI work log), and `PROJECT_TREE.md` ASCII diagrams.
-- **Dual Audit Logging System**: Simultaneously writes machine-readable JSONL (`operations.jsonl`) and human-readable text logs (`operations.log`) detailing every AI action with timestamps, durations, and statuses.
-- **Layered Pydantic v2 Configuration**: Flexible settings precedence (Defaults → Config File → Environment Variables `WORKSPACE_MCP_*`).
-- **Broad Compatibility**: Works seamlessly with **Claude Desktop**, **Claude Code**, **Antigravity IDE**, **VS Code**, **Cursor**, **Windsurf**, **Continue.dev**, and **Ollama**.
+When asking **Claude (Claude Desktop or Claude Code)** to build large applications, complex features, or multi-file repositories, developers constantly hit **output token exhaustion** and **context window limits**:
 
----
+1. **Truncated Code Outputs**: Claude hits completion token caps mid-file, cutting off code generation and forcing you to prompt *"continue writing line 150..."* repeatedly.
+2. **Context Loss Across Conversations**: Once a chat gets long or expires, generated code lost in chat history must be manually copy-pasted and assembled.
+3. **No Direct Local File Storage**: Standard web or desktop chats cannot write directly to your disk.
 
-## 📖 Table of Contents
+### 💡 The Solution: Direct Local Storage
+With **Workspace MCP**, Claude writes files **directly to your local filesystem** progressively as it works:
 
-- [Why Workspace MCP?](#why-workspace-mcp)
-- [Screenshots & Architecture Visual](#screenshots--architecture-visual)
-- [Technical Guide & Architecture](#technical-guide--architecture)
-- [Claude Desktop Configuration Guide](#-claude-desktop-configuration-guide)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Folder Structure](#folder-structure)
-- [Supported IDEs](#supported-ides)
-- [Supported LLMs](#supported-llms)
-- [Configuration](#configuration)
-- [Commands / MCP Tools](#commands--mcp-tools)
-- [Examples & Usage Scenarios](#examples--usage-scenarios)
-- [Performance & Security Benchmarks](#performance--security-benchmarks)
-- [FAQ](#faq)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+- **Incremental File Saving**: Every file, directory, and configuration is written immediately to disk. If Claude reaches a token output limit on a response, **everything written so far is 100% saved on your computer**.
+- **Seamless Resume**: Simply tell Claude in a fresh prompt or new conversation: *"Check the existing files in my project and continue building..."*. Claude uses `read_file`, `find_text`, or `update_file` to inspect local code and pick up exactly where it left off.
+- **Automated Work Logging (`CLOUD.md`)**: Claude maintains an automated work log documenting architectural decisions, created files, and next steps so future Claude sessions never lose context.
 
 ---
 
-# Why Workspace MCP?
+## 🔌 How to Connect to Claude Desktop
 
-### The Problem It Solves
-When working with AI coding assistants (like Claude, ChatGPT, or local LLMs via Ollama), developers frequently suffer from friction:
-1. **Copy-Paste Exhaustion**: Manually copying code snippets back and forth between chat windows and code editors.
-2. **ZIP File Clutter**: Downloading temporary ZIP archives generated by web LLMs and manually unzipping them over local projects.
-3. **Lack of File Audit Trails**: Standard AI plugins mutate files without detailed logging, making it hard to track what the LLM changed during a refactoring session.
-4. **Security Vulnerabilities**: Naïve file-editing tools often allow path traversal attacks or unverified symlink resolution that could accidentally overwrite system files outside your target repository.
+### Why Use `uv` for Automatic Server Execution?
+By configuring Claude Desktop with `uv`, **Claude Desktop automatically launches and manages Workspace MCP in the background**. 
 
-### Who Should Use It?
-* **Software Engineers & Developers**: Who want an AI assistant to scaffold full-stack applications (e.g. FastAPI + React), create directories, write docstrings, and run grep searches directly on disk.
-* **AI Tool Developers & Researchers**: Building autonomous agent workflows that require reliable, sandboxed filesystem tools.
-* **Teams & Open Source Maintainers**: Looking for standardized project scaffolding with automated architectural work logs (`CLOUD.md`).
+You do **not** need to manually open a terminal, activate virtual environments, or run server commands before opening Claude. `uv` handles installation, dependencies, and execution automatically whenever Claude Desktop starts up.
 
-### Why Is It Different From Other MCP Servers?
-Unlike basic filesystem servers that offer raw, un-sanitised file access, **Workspace MCP** provides a production-hardened **Developer Tools** ecosystem built with enterprise security, typed Pydantic models, confirmation-gated protection, structured audit logging, and automated documentation generation out of the box.
+### Step 1: Open `claude_desktop_config.json`
 
----
+Open the configuration file for your operating system:
 
-# Screenshots & Architecture Visual
-
-### System Flow Architecture
-
-```
-+-------------------------------------------------------------------------+
-|                              IDE / AI CLIENT                            |
-|     (Claude Desktop, Claude Code, Antigravity IDE, VS Code, Ollama)     |
-+-------------------------------------------------------------------------+
-                                     |
-                         Model Context Protocol (Stdio / SSE)
-                                     v
-+-------------------------------------------------------------------------+
-|                          WORKSPACE MCP SERVER                           |
-|                      (FastMCP Entry Point: server.py)                   |
-+-------------------------------------------------------------------------+
-       |                             |                            |
-       v                             v                            v
-+--------------+             +---------------+            +---------------+
-| Config Layer |             |  Tools Layer  |            | Logging Engine|
-| (settings.py)|             | (22 MCP Tools)|            | (logger.py)   |
-+--------------+             +---------------+            +---------------+
-                                     |
-                                     v
-                             +---------------+
-                             | Services Layer|
-                             |  (Business    |
-                             |     Logic)    |
-                             +---------------+
-                                     |
-                                     v
-                        +-------------------------+
-                        | Security Sandbox Engine |
-                        | (utils/pathsec.py)      |
-                        +-------------------------+
-                                     |
-                        Safe Realpath Resolution
-                                     v
-                        +-------------------------+
-                        |  Local Filesystem Root  |
-                        |   (Sandboxed Storage)   |
-                        +-------------------------+
-```
-
----
-
-# Technical Guide & Architecture
-
-Workspace MCP follows a strict **Layered Architecture** design pattern. Dependencies flow downwards only; business logic is decoupled from transport protocol wrappers, and security validation is centralized in a single module.
-
-```
-tools/          <-- Thin @mcp.tool() wrappers; format uniform JSON envelopes
-services/       <-- Core business logic; raise typed WorkspaceError exceptions
-utils/pathsec   <-- Sandboxing engine; the ONLY place resolving filesystem paths
-config/         <-- Immutable Pydantic settings loaded at server initialization
-models/         <-- Shared Pydantic data schemas & exception class hierarchy
-logging/        <-- Structured JSONL + text logger context manager
-server.py       <-- FastMCP entry point wiring services and tools together
-```
-
-### 1. Security & Sandboxing Engine (`utils/pathsec.py`)
-To prevent path traversal and arbitrary file write vulnerabilities, Workspace MCP uses `PathValidator.resolve()`:
-* **Canonical Path Resolution**: Uses `os.path.realpath` and `Path.resolve(strict=False)` rather than string prefix checks (which are vulnerable to `../` tricks).
-* **Workspace Boundary Check**: Ensures the fully resolved path is inside `workspace_root`. Any step outside raises `WORKSPACE_VIOLATION` or `PATH_TRAVERSAL`.
-* **Symlink Policy Enforcement**: Inspects candidate paths prior to resolution to ensure symlinks do not escape the workspace sandbox.
-* **Windows Reserved Filename Guard**: Rejects Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) regardless of operating system, ensuring generated projects are cross-platform portable.
-
-### 2. Service Layer & Exception Design (`services/*.py`)
-Service classes (`ProjectService`, `FileService`, `DirectoryService`, `SearchService`, `DocService`) carry pure Python logic. Instead of returning error dictionaries, they raise strongly-typed `WorkspaceError` subclasses (e.g. `PathTraversalError`, `DuplicateFileError`, `ConfirmationRequiredError`). This allows services to be reused in CLI scripts or test environments cleanly.
-
-### 3. Uniform Tool Envelopes (`tools/_common.py`)
-All 22 MCP tools wrap service calls using `run_tool()`. This ensures every response sent back to the AI client follows a uniform JSON envelope:
-
-**Success Response:**
-```json
-{
-  "status": "success",
-  "operation": "Created File",
-  "target_path": "TaskManager/backend/main.py",
-  "duration_ms": 1.45,
-  "data": {
-    "path": "TaskManager/backend/main.py",
-    "bytes_written": 520
-  }
-}
-```
-
-**Error Response:**
-```json
-{
-  "status": "error",
-  "operation": "Create File",
-  "target_path": "../etc/passwd",
-  "message": "Path traversal ('..') is not permitted.",
-  "error_code": "PATH_TRAVERSAL",
-  "duration_ms": 0.32
-}
-```
-
----
-
-# 🛠️ Claude Desktop Configuration Guide
-
-This section explains how to configure **Claude Desktop** to connect directly to Workspace MCP, turning Claude into an autonomous local project architect.
-
-### What Changed in the Claude Desktop Config?
-Claude Desktop reads an MCP configuration file (`claude_desktop_config.json`) at startup. By adding a entry under `mcpServers`, you tell Claude Desktop how to launch `workspace-mcp` in the background via standard input/output (stdio) transport.
-
-### Config File Locations
-
-| Operating System | Config File Path |
-| ---------------- | ---------------- |
+| Operating System | Config File Location |
+| --- | --- |
 | **Windows** | `%APPDATA%\Claude\claude_desktop_config.json` <br> *(e.g. `C:\Users\YourUsername\AppData\Roaming\Claude\claude_desktop_config.json`)* |
 | **macOS** | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | **Linux** | `~/.config/Claude/claude_desktop_config.json` |
 
-### Configuration Examples
+### Step 2: Add the Automatic `uv` Configuration
 
-#### Option A: Using `uv` (Recommended)
+Paste the following JSON block into your `claude_desktop_config.json` file. Update the directory paths to match your local installation of `workspace-mcp` and your desired `--workspace-root` folder:
+
+#### Windows Configuration:
 ```json
 {
   "mcpServers": {
@@ -195,7 +57,7 @@ Claude Desktop reads an MCP configuration file (`claude_desktop_config.json`) at
       "command": "uv",
       "args": [
         "--directory",
-        "C:/path/to/workspace-mcp",
+        "C:/Users/YourUsername/mcp/servers/workspace-mcp",
         "run",
         "workspace-mcp",
         "--workspace-root",
@@ -206,32 +68,17 @@ Claude Desktop reads an MCP configuration file (`claude_desktop_config.json`) at
 }
 ```
 
-#### Option B: Direct Virtual Environment Executable (Windows)
+#### macOS / Linux Configuration:
 ```json
 {
   "mcpServers": {
     "workspace-mcp": {
-      "command": "C:\\path\\to\\workspace-mcp\\.venv\\Scripts\\python.exe",
+      "command": "uv",
       "args": [
-        "-m",
-        "workspace_mcp.server",
-        "--workspace-root",
-        "C:\\Users\\YourUsername\\AIProjects"
-      ]
-    }
-  }
-}
-```
-
-#### Option C: Direct Virtual Environment Executable (macOS / Linux)
-```json
-{
-  "mcpServers": {
-    "workspace-mcp": {
-      "command": "/home/user/workspace-mcp/.venv/bin/python",
-      "args": [
-        "-m",
-        "workspace_mcp.server",
+        "--directory",
+        "/home/user/workspace-mcp",
+        "run",
+        "workspace-mcp",
         "--workspace-root",
         "/home/user/AIProjects"
       ]
@@ -240,276 +87,126 @@ Claude Desktop reads an MCP configuration file (`claude_desktop_config.json`) at
 }
 ```
 
-### How to Set It Up & Use It (Step-by-Step)
+> 💡 **Prerequisite**: Make sure `uv` is installed on your system ([install uv](https://github.com/astral-sh/uv)).
 
-1. **Locate or Create Config**: Open your OS-specific `claude_desktop_config.json` path in a text editor.
-2. **Add the Server Block**: Paste one of the JSON configurations above. Make sure paths point to your actual `workspace-mcp` folder and your desired `workspace-root` folder.
-3. **Restart Claude Desktop**: Fully exit Claude Desktop (from system tray / menu bar) and launch it again.
-4. **Verify the Tools**: Click the **hammer icon (🔨)** in the bottom right corner of Claude Desktop. You should see **22 new tools** provided by `workspace-mcp` (e.g., `create_project`, `read_file`, `write_file`, `find_text`, `generate_readme`).
-5. **Start Prompting**: Ask Claude:
-   > *"Build a complete FastAPI + React project named ExpenseTracker inside my workspace, and generate the project tree and documentation."*
+### Step 3: Restart & Verify in Claude Desktop
 
-### Why This Helps
-* **No File Drag-and-Drop**: Claude builds files directly inside your specified project directory.
-* **Instant Project Visuals**: Claude uses `project_tree` and `generate_readme` to give you instant structural feedback.
-* **Audit Trail**: Every command Claude executes is recorded in `operations.log` inside your workspace log folder.
+1. Fully quit Claude Desktop (exit from system tray / menu bar).
+2. Re-open Claude Desktop.
+3. Click the **hammer icon (🔨)** in the lower-right corner of the chat box.
+4. You will see **22 Workspace MCP tools** active and ready to use!
 
 ---
 
-# Installation
+## 🛠️ How We Use It (Workflow & Prompts)
 
-### Method 1: Using `uv` (Fastest & Recommended)
+### Workflow 1: Building Full Applications
+Ask Claude Desktop to scaffold a complete project:
 
-```bash
-# Clone the repository
-git clone https://github.com/shanmukhdatta/workspace-mcp.git
-cd workspace-mcp
+> *"Claude, create a new project called `TaskManager` with a FastAPI backend, React frontend, Docker setup, and document everything in `README.md` and `CLOUD.md`."*
 
-# Sync dependencies and build virtual environment
-uv sync
+Claude automatically invokes `create_project`, creates the directory structure, writes `main.py` and `App.jsx`, and generates documentation directly inside your local `AIProjects/TaskManager` folder.
 
-# Run the server
-uv run workspace-mcp --workspace-root ./my_projects
-```
+### Workflow 2: Resuming Work After Token Limits
+If Claude stops mid-task due to token completion limits:
 
-### Method 2: Standard Python & Virtual Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/shanmukhdatta/workspace-mcp.git
-cd workspace-mcp
-
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in editable mode
-pip install -e .
-
-# Run the server
-workspace-mcp --workspace-root ./my_projects
-```
+1. Open a new or existing chat with Claude.
+2. Prompt Claude:
+   > *"Check the files in `TaskManager/backend`, read `CLOUD.md` to see what was built, and finish implementing the database models."*
+3. Claude executes `list_directory`, `read_file`, and `write_file` to inspect your local code and seamlessly complete the feature.
 
 ---
 
-# Quick Start
-
-### 1. Launch Server via Command Line
-
-```bash
-workspace-mcp --workspace-root /path/to/projects --config workspace_mcp.config.example.yaml
-```
-
-### 2. Verify Server Health
-
-You can validate workspace configuration programmatically by invoking the `validate_workspace` tool or testing with `pytest`:
-
-```bash
-uv run pytest
-```
-
----
-
-# Folder Structure
+## 🛡️ Security & Sandboxing Architecture
 
 ```
-workspace-mcp/
-├── .github/
-│   └── workflows/
-│       └── ci.yml               # Automated GitHub Actions test workflow
-├── docs/                        # Complete technical documentation suite
-│   ├── API.md                   # Detailed tool schemas & parameters
-│   ├── ARCHITECTURE.md          # Architectural layer breakdown
-│   ├── CLIENT_CONFIG.md         # MCP client integration instructions
-│   ├── CONFIGURATION.md         # Full YAML & environment options
-│   ├── DEVELOPER_GUIDE.md       # Dev setup & testing guidelines
-│   ├── EXTENSION_GUIDE.md       # Phase 2 roadmap & tool expansion
-│   ├── INSTALL.md               # Platform installation details
-│   └── QUICKSTART.md            # Quick reference guide
-├── examples/                    # Sample client configs & prompt guides
-│   ├── claude_desktop_config.json
-│   └── example_prompts.md
-├── images/                      # Diagram & architectural media assets
-│   └── README.md
-├── src/
-│   └── workspace_mcp/
-│       ├── __init__.py
-│       ├── server.py            # FastMCP entry point & tool wiring
-│       ├── config/
-│       │   └── settings.py      # Immutable Pydantic configuration loader
-│       ├── logging/
-│       │   └── logger.py        # Structured JSONL & text operations logger
-│       ├── models/
-│       │   └── schemas.py       # Pydantic schemas & WorkspaceError exceptions
-│       ├── services/            # Pure business logic services
-│       │   ├── directory_service.py
-│       │   ├── doc_service.py
-│       │   ├── file_service.py
-│       │   ├── project_service.py
-│       │   └── search_service.py
-│       ├── tools/               # FastMCP @mcp.tool() wrappers
-│       │   ├── _common.py       # Uniform envelope & exception runner
-│       │   ├── directory_tools.py
-│       │   ├── doc_tools.py
-│       │   ├── file_tools.py
-│       │   ├── project_tools.py
-│       │   ├── search_tools.py
-│       │   └── validation_tools.py
-│       └── utils/
-│           └── pathsec.py       # PathValidator realpath security engine
-├── tests/                       # Comprehensive pytest suite (80+ tests)
-├── CHANGELOG.md                 # Version history & release notes
-├── CODE_OF_CONDUCT.md           # Community guidelines
-├── CONTRIBUTING.md              # Contribution instructions
-├── FAQ.md                       # Frequently asked questions
-├── LICENSE                      # MIT License
-├── PROJECT_TREE.md              # Auto-generated workspace visual tree
-├── README.md                    # Main repository documentation
-├── ROADMAP.md                   # Multi-phase development roadmap
-├── SECURITY.md                  # Security policies & vulnerability reporting
-├── pyproject.toml               # Hatchling build specification & dependencies
-└── workspace_mcp.config.example.yaml # Annotated configuration file
++-------------------------------------------------------------------+
+|                           CLAUDE DESKTOP                          |
++-------------------------------------------------------------------+
+                                  |
+                      MCP Stdio Transport (JSON-RPC)
+                                  v
++-------------------------------------------------------------------+
+|                        WORKSPACE MCP SERVER                       |
+|                       (uv run workspace-mcp)                      |
++-------------------------------------------------------------------+
+        |                         |                         |
+        v                         v                         v
++----------------+       +------------------+      +----------------+
+| Pydantic Config|       |   22 FastMCP     |      | Dual Logging   |
+| (settings.py)  |       |   Tool Handlers  |      | Engine         |
++----------------+       +------------------+      +----------------+
+                                  |
+                                  v
+                         +------------------+
+                         | Service Layer    |
+                         +------------------+
+                                  |
+                                  v
+                         +------------------+
+                         | PathValidator    |
+                         | Realpath Sandbox |
+                         +------------------+
+                                  |
+                      Verified Safe Local Path
+                                  v
+                         +------------------+
+                         | Local Hard Drive |
+                         | (Workspace Root) |
+                         +------------------+
 ```
 
----
-
-# Supported IDEs
-
-* **Claude Code**: Native stdio execution with direct filesystem manipulation.
-* **VS Code**: Via official MCP plugins or Continue.dev extensions.
-* **Antigravity IDE**: Deep integration with Model Context Protocol agents.
-* **Cursor**: Stdio / SSE MCP server connector support.
-* **Windsurf**: Stdio MCP tool configuration.
-* **Continue.dev**: Open-source AI code assistant supporting stdio MCP servers.
+### Security Sandbox Features
+- **Strict Single-Root Isolation**: Claude can **only** read, write, or search within your configured `--workspace-root`.
+- **Anti-Traversal Verification**: All paths are checked using `os.path.realpath` / `Path.resolve()` to prevent `..` relative path escapes and symlink exploits.
+- **Confirmation Protection**: Destructive operations (file deletions, full overwrites) require confirmation flags to safeguard against accidental code loss.
+- **Dual Audit Trail**: Logs every tool call to `operations.jsonl` (JSON) and `operations.log` (text) inside your workspace log folder.
 
 ---
 
-# Supported LLMs
+## 🧰 MCP Tools Reference
 
-* **Ollama**: Local models including Llama 3, Qwen 2.5, DeepSeek-R1, Mistral, CodeLlama.
-* **Claude (Anthropic)**: Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus.
-* **OpenAI**: GPT-4o, GPT-4o-mini, o1, o3-mini.
-* **Gemini (Google DeepMind)**: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 2.0 Flash.
-* **DeepSeek**: DeepSeek-V3, DeepSeek-R1.
+Workspace MCP provides **22 production tools** organized into 6 functional groups:
 
----
-
-# Configuration
-
-Workspace MCP uses a 3-tier layered configuration system:
-1. **Hardcoded Defaults**
-2. **YAML / JSON Config File** (`--config workspace_mcp.config.yaml`)
-3. **Environment Variables** (`WORKSPACE_MCP_*`) — *Highest Priority*
-
-### Configuration Options
-
-| Option | YAML Key | Env Variable | Default | Description |
-| ------ | -------- | ------------ | ------- | ----------- |
-| Workspace Root | `workspace_root` | `WORKSPACE_MCP_WORKSPACE_ROOT` | `./workspace` | Base sandboxed directory for all operations |
-| Max File Size | `max_file_size_bytes` | `WORKSPACE_MCP_MAX_FILE_SIZE_BYTES` | `10485760` (10MB) | Max bytes allowed for single file write |
-| Allowed Extensions | `allowed_extensions` | `WORKSPACE_MCP_ALLOWED_EXTENSIONS` | `[]` (All text) | Whitelist of permitted file extensions |
-| Ignored Dirs | `ignored_directories` | `WORKSPACE_MCP_IGNORED_DIRECTORIES` | `[".git", ".venv", ...]` | Directories hidden from search & tree listings |
-| Symlink Policy | `symlink_policy` | `WORKSPACE_MCP_SYMLINK_POLICY` | `"reject"` | Policy for symlinks (`reject`, `allow_internal`) |
-| Require Overwrite Confirm | `require_overwrite_confirmation` | `WORKSPACE_MCP_REQUIRE_OVERWRITE_CONFIRMATION` | `true` | Enforce `confirm=true` on overwrite/delete |
-| Log Directory | `log_dir` | `WORKSPACE_MCP_LOG_DIR` | `./workspace/logs` | Folder for operations logs |
-
----
-
-# Commands / MCP Tools
-
-Workspace MCP provides **22 production tools** categorized into 6 functional groups:
-
-### 1. Project Management Tools
-| Tool | Description | Key Parameters |
-| ---- | ----------- | -------------- |
-| `create_project` | Scaffold new project with conventional subfolders & docs | `name`, `structure`, `description`, `include_docker` |
-| `delete_project` | Permanently delete project directory | `name`, `confirm` (must be `true`) |
-| `rename_project` | Rename or relocate a project | `old_name`, `new_name`, `overwrite` |
-
-### 2. Directory Management Tools
-| Tool | Description | Key Parameters |
-| ---- | ----------- | -------------- |
-| `create_directory` | Create directory (and missing parents) | `path`, `exist_ok` |
-| `delete_directory` | Delete directory recursively | `path`, `confirm`, `recursive` |
-| `list_directory` | List directory contents with metadata | `path`, `include_hidden` |
-
-### 3. File Operations Tools
-| Tool | Description | Key Parameters |
-| ---- | ----------- | -------------- |
-| `create_file` | Create a new file | `path`, `content`, `overwrite` |
-| `read_file` | Read UTF-8 text file content | `path` |
-| `write_file` | Overwrite file content completely | `path`, `content`, `confirm` |
-| `append_file` | Append text to end of file | `path`, `content` |
-| `update_file` | Partial find/replace or full update | `path`, `find`, `replace`, `new_content`, `count` |
-| `move_file` | Move file to new location | `source_path`, `destination_path`, `overwrite` |
-| `rename_file` | Rename file in-place | `path`, `new_name`, `overwrite` |
-| `delete_file` | Permanently delete a file | `path`, `confirm` |
-
-### 4. Search & Codebase Navigation Tools
-| Tool | Description | Key Parameters |
-| ---- | ----------- | -------------- |
-| `search_files` | Glob file search (e.g. `"**/*.py"`) | `pattern`, `root`, `max_results` |
-| `find_text` | Grep-like text search inside files | `query`, `root`, `extensions`, `case_sensitive` |
-| `project_tree` | Render ASCII folder tree string | `path` |
-
-### 5. Automated Documentation Tools
-| Tool | Description | Key Parameters |
-| ---- | ----------- | -------------- |
-| `generate_readme` | Auto-generate/update `README.md` | `project_path`, `description`, `features`, `tech_stack` |
-| `generate_cloud_log` | Auto-generate AI work log (`CLOUD.md`) | `project_path`, `goal`, `architecture_decisions` |
-| `generate_project_tree` | Write `PROJECT_TREE.md` to disk | `project_path` |
-
-### 6. Validation & Security Tools
-| Tool | Description | Key Parameters |
-| ---- | ----------- | -------------- |
-| `validate_workspace` | Check server health, limits & settings | *None* |
-| `validate_path` | Inspect safety/existence of relative path | `path` |
+| Category | Tool | Description |
+| --- | --- | --- |
+| **Project** | `create_project` | Scaffolds directory structure + `.gitignore`, `Dockerfile`, `README.md`, `CLOUD.md` |
+| | `delete_project` | Permanently deletes a project folder (requires `confirm=true`) |
+| | `rename_project` | Renames or moves a project directory |
+| **Directory** | `create_directory` | Creates directories (including missing parent folders) |
+| | `delete_directory` | Deletes directory recursively (requires `confirm=true`) |
+| | `list_directory` | Lists directory contents, sizes, and file metadata |
+| **File Operations** | `create_file` | Creates a new file with content |
+| | `read_file` | Reads UTF-8 text file content |
+| | `write_file` | Overwrites file content completely (requires `confirm=true`) |
+| | `append_file` | Appends code/text to an existing file |
+| | `update_file` | Targeted string substitution (`find`/`replace`) or partial rewrite |
+| | `move_file` / `rename_file` | Relocates or renames a file |
+| | `delete_file` | Permanently deletes a file (requires `confirm=true`) |
+| **Search** | `search_files` | Glob file search (e.g. `**/*.py`, `src/**/*.ts`) |
+| | `find_text` | Grep-like search across text files for code references |
+| | `project_tree` | Generates ASCII project structure visual string |
+| **Docs** | `generate_readme` | Auto-generates/updates `README.md` |
+| | `generate_cloud_log` | Auto-generates `CLOUD.md` AI work log |
+| | `generate_project_tree` | Saves `PROJECT_TREE.md` diagram to disk |
+| **Validation** | `validate_workspace` | Inspects active server limits and workspace configuration |
+| | `validate_path` | Checks if a path is safe and valid without modifying disk |
 
 ---
 
-# Examples & Usage Scenarios
+## ⚙️ Configuration Reference
 
-### Example 1: Full-Stack Project Bootstrapping
+Configure settings via command-line flags or environment variables (`WORKSPACE_MCP_*`):
 
-**User Prompt:**
-> "Create a full-stack web application named TaskMaster with a FastAPI backend, React frontend, Docker containerization, and generate documentation."
-
-**Tool Execution Chain:**
-1. `create_project(name="TaskMaster", include_docker=true)`
-2. `create_file(path="TaskMaster/backend/main.py", content="from fastapi import FastAPI...")`
-3. `create_file(path="TaskMaster/frontend/src/App.jsx", content="export default function App()...")`
-4. `generate_readme(project_path="TaskMaster", description="Full-stack task manager")`
-5. `generate_cloud_log(project_path="TaskMaster", goal="Bootstrap TaskMaster MVP")`
+| Flag / Option | Environment Variable | Default | Description |
+| --- | --- | --- | --- |
+| `--workspace-root` | `WORKSPACE_MCP_WORKSPACE_ROOT` | `./workspace` | Target directory for all local project files |
+| `--config` | `WORKSPACE_MCP_CONFIG` | `None` | Optional path to YAML/JSON configuration file |
+| `max_file_size_bytes` | `WORKSPACE_MCP_MAX_FILE_SIZE_BYTES` | `10485760` (10MB) | Max bytes allowed for single file write |
+| `require_overwrite_confirmation` | `WORKSPACE_MCP_REQUIRE_OVERWRITE_CONFIRMATION` | `true` | Requires `confirm=true` on overwrite/delete |
 
 ---
 
-# Performance & Security Benchmarks
+## 📄 License & Contributing
 
-* **Path Resolution Speed**: `< 0.05ms` per `PathValidator.resolve()` call using native OS realpath hooks.
-* **Search Throughput**: Scans up to 5,000 text files/second using non-blocking Python generator pipelines.
-* **Memory Footprint**: `< 35 MB` RSS idle memory consumption.
-* **Security Test Coverage**: 100% path traversal, relative escape, and symlink security test suite coverage.
-
----
-
-# FAQ
-
-See [FAQ.md](FAQ.md) for full questions and answers.
-
----
-
-# Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for detailed multi-phase plans.
-
----
-
-# Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting pull requests.
-
----
-
-# License
-
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+Distributed under the [MIT License](LICENSE). Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
