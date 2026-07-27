@@ -1,162 +1,127 @@
 # Workspace MCP
 
-> **The local filesystem bridge for Claude Desktop & Claude Code.** Stop losing code to token limits — let Claude design, build, and save full-stack software projects directly on your hard drive.
+> A Model Context Protocol (MCP) server that gives Claude Desktop & Claude Code direct access to explore, scaffold, edit, and organize local project codebases.
 
-[![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)](pyproject.toml)
-[![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-purple.svg)](https://modelcontextprotocol.io)
-[![CI Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](.github/workflows/ci.yml)
-[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![MCP Protocol](https://img.shields.io/badge/MCP-1.2.0-purple.svg?style=flat-square)](https://modelcontextprotocol.io)
 
 ---
 
-## 🎯 The Token Limit Problem & How Workspace MCP Solves It
+## Overview: Solving Claude's Token Limits
 
-When asking **Claude (Claude Desktop or Claude Code)** to build large applications, complex features, or multi-file repositories, developers constantly hit **output token exhaustion** and **context window limits**:
+When using Claude to build multi-file projects, developers frequently run into **output token limits** and **context window cutoffs**:
 
-1. **Truncated Code Outputs**: Claude hits completion token caps mid-file, cutting off code generation and forcing you to prompt *"continue writing line 150..."* repeatedly.
-2. **Context Loss Across Conversations**: Once a chat gets long or expires, generated code lost in chat history must be manually copy-pasted and assembled.
-3. **No Direct Local File Storage**: Standard web or desktop chats cannot write directly to your disk.
+1. **Truncated File Outputs**: Claude hits completion token limits mid-file, cutting off output and forcing you to repeatedly ask it to continue.
+2. **Lost Progress**: When a conversation gets too long or expires, un-saved code in the chat window disappears unless manually copy-pasted into your editor.
+3. **No Direct Disk Access**: Standard web and desktop chats cannot write files to your machine.
 
-### 💡 The Solution: Direct Local Storage
-With **Workspace MCP**, Claude writes files **directly to your local filesystem** progressively as it works:
+### How Workspace MCP Helps
+Workspace MCP connects Claude directly to your local filesystem:
 
-- **Incremental File Saving**: Every file, directory, and configuration is written immediately to disk. If Claude reaches a token output limit on a response, **everything written so far is 100% saved on your computer**.
-- **Seamless Resume**: Simply tell Claude in a fresh prompt or new conversation: *"Check the existing files in my project and continue building..."*. Claude uses `read_file`, `find_text`, or `update_file` to inspect local code and pick up exactly where it left off.
-- **Automated Work Logging (`CLOUD.md`)**: Claude maintains an automated work log documenting architectural decisions, created files, and next steps so future Claude sessions never lose context.
-
----
-
-## 💡 Capabilities Guide — What is this, really?
-
-Think of **workspace-mcp** as giving an AI assistant *hands* inside a project folder on disk. Without it, an AI can only talk to you about code — you'd have to copy-paste files back and forth manually. With it, the AI can directly create, read, edit, organize, and document real files and folders, the same way a developer would using a file explorer and a terminal.
-
-It does **not** write your logic for you by magic, and it's **not** a game engine, compiler, or database. It's a **file and project management layer**. The "intelligence" (writing the actual logic, API code, etc.) still comes from the AI reasoning about your request — **workspace-mcp** is what lets that reasoning turn into real files on your machine, cleanly organized.
+- **Incremental Local Disk Saves**: Every file and folder is saved immediately as Claude works. If Claude hits an output token limit on a long response, everything written up to that point remains safely stored on disk.
+- **Resuming Work**: In a new chat prompt, you can simply ask Claude to read the project files and pick up where it left off using `read_file`, `find_text`, or `update_file`.
+- **Automatic Work Logs (`CLOUD.md`)**: Maintains an architectural work log tracking what was built, key decisions, and next steps.
 
 ---
 
-### The Core Idea: 4 Categories of Power
+## Capabilities Guide: What Workspace MCP Does
 
-Every tool in **workspace-mcp** falls into one of these four buckets:
+Think of `workspace-mcp` as providing **file and project management capabilities** to your AI assistant. The AI handles the reasoning (what code to write and how to structure it); `workspace-mcp` handles applying those changes directly to disk in an organized manner.
 
-| Category | What it means in plain English |
+### The 4 Main Tool Categories
+
+| Category | Description |
 |---|---|
-| 🗂️ **Project & Folder Management** | Creating, renaming, deleting entire projects or folders |
-| 📄 **File Operations** | Creating, reading, editing, moving, renaming, deleting individual files |
-| 🔍 **Search & Discovery** | Finding files or text across a whole project without manually digging |
-| 📝 **Auto-Documentation** | Generating README, project trees, and work logs automatically |
+| **Project & Folder Management** | Create, rename, or remove project roots and subdirectories. |
+| **File Operations** | Create, read, edit, move, rename, and delete individual files safely. |
+| **Search & Discovery** | Find text across files (`grep`), search by filename patterns (`glob`), or list directory trees. |
+| **Auto-Documentation** | Automatically generate `README.md`, `PROJECT_TREE.md`, and `CLOUD.md` work logs. |
 
 ---
 
-### 1. 🗂️ Project & Folder Management
+### 1. Project & Folder Management
 
-This is the "scaffolding" layer — setting up the skeleton before anything gets built.
+- `create_project` — Initializes a project directory with a default scaffold.
+- `create_directory` — Creates subfolders (e.g. `src/`, `docs/`) and missing parent folders.
+- `rename_project` — Moves or renames an entire project directory.
+- `delete_directory` — Recursively deletes a folder (requires explicit `confirm=true`).
+- `delete_project` — Permanently removes an entire project directory (requires `confirm=true`).
 
-- **`create_project`** — Starts a brand-new project folder with a sensible structure. This is usually the *first* thing you do.
-- **`create_directory`** — Adds a subfolder inside a project (e.g. `src/`, `assets/`, `docs/`). Creates parent folders automatically if they don't exist yet.
-- **`rename_project`** — Renames (moves) an entire project.
-- **`delete_directory`** — Removes a folder and everything inside it. Permanent — use with care.
-- **`delete_project`** — Wipes an entire project. Also permanent.
-
-> 💡 **Beginner tip:** Always start a new piece of work with `create_project`. It keeps everything organized instead of scattering files around loosely.
+*Tip:* Use `create_project` when starting a new application to keep files scoped inside a dedicated folder.
 
 ---
 
-### 2. 📄 File Operations
+### 2. File Operations
 
-This is where actual content gets written.
+- `create_file` — Creates a new file with content (fails if the file already exists to prevent accidental overwrites).
+- `write_file` — Overwrites a file completely or creates it if missing (requires `confirm=true` if overwriting).
+- `update_file` — Performs targeted string edits (`find`/`replace`) on existing files without replacing the entire file.
+- `append_file` — Appends text to the end of a file without touching existing content.
+- `read_file` — Reads a file's full UTF-8 text content.
+- `move_file` — Relocates a file to another directory.
+- `rename_file` — Renames a file within its current folder.
+- `delete_file` — Deletes a single file (requires `confirm=true`).
 
-- **`create_file`** — Makes a brand-new file with content (fails if the file already exists — this is a safety net against accidentally overwriting work).
-- **`write_file`** — Overwrites a file's *entire* content, or creates it if it doesn't exist yet. Use this when you want a clean slate.
-- **`update_file`** — Edits *part* of an existing file (like changing one function) without touching the rest.
-- **`append_file`** — Adds text to the *end* of a file, without touching what's already there (great for logs or growing notes).
-- **`read_file`** — Reads a file's full content back to you.
-- **`move_file`** — Moves a file to a different folder (can rename it at the same time).
-- **`rename_file`** — Renames a file, keeping it in the same folder.
-- **`delete_file`** — Permanently deletes a single file.
-
-> 💡 **Beginner tip:** `create_file` vs `write_file` vs `update_file` is the most common confusion:
-> - Brand new file → `create_file`
-> - Replace everything in an existing file → `write_file`
-> - Change just one part → `update_file`
+*Tip:* Use `create_file` for new files, `update_file` for small inline edits, and `write_file` when rewriting an entire file.
 
 ---
 
-### 3. 🔍 Search & Discovery
+### 3. Search & Discovery
 
-Once a project has more than a couple of files, you need to *find* things instead of remembering where everything is.
+- `find_text` — Grep-like search across text files for literal strings (e.g. finding `TODO` comments or function usages).
+- `search_files` — Glob search for files matching a pattern (e.g. `**/*.py` or `*.ts`).
+- `list_directory` — Lists files and subdirectories with sizes and metadata.
 
-- **`find_text`** — Searches file *contents* for a literal string (like grep). Great for finding all `TODO` comments, or every place a function is used.
-- **`search_files`** — Finds files by *name pattern* (e.g. all `.js` files, or anything named `test_*`).
-- **`list_directory`** — Shows what's immediately inside a folder (like `ls`).
-
-> 💡 **Beginner tip:** Use `search_files` when you know *what kind* of file you want but not *where* it is. Use `find_text` when you know *what text* you're looking for but not *which file* it's in.
+*Tip:* Use `search_files` when looking for file types or names, and `find_text` when searching for specific code references across the project.
 
 ---
 
-### 4. 📝 Auto-Documentation & Introspection
+### 4. Auto-Documentation & Validation
 
-This is the layer that keeps a project understandable — for you, teammates, or your future self.
-
-- **`generate_readme`** — Auto-writes a proper `README.md` for the project (sections like setup, usage, structure).
-- **`generate_project_tree`** — Creates a saved `PROJECT_TREE.md` — a visual ASCII map of every file and folder.
-- **`project_tree`** — Same idea, but just *shows* it to you without saving it to disk.
-- **`generate_cloud_log`** — Creates `CLOUD.md`, a plain-English log explaining what the AI actually built and *why* — useful for tracking AI-assisted work over time.
-- **`validate_path`** — Checks if a given file path is valid and safe before you use it.
-- **`validate_workspace`** — Reports on the overall health of the workspace (root location, config, etc.).
-
-> 💡 **Beginner tip:** Run `generate_readme` + `generate_project_tree` + `generate_cloud_log` near the *end* of a work session — they document what was just built, so it's most accurate then.
+- `generate_readme` — Creates or updates a structured `README.md`.
+- `generate_project_tree` — Saves an ASCII visual tree to `PROJECT_TREE.md`.
+- `project_tree` — Returns an ASCII visual tree in the tool response without saving to disk.
+- `generate_cloud_log` — Writes `CLOUD.md` documenting what was built and why.
+- `validate_workspace` — Checks workspace configuration and limits.
+- `validate_path` — Verifies if a path is safe and valid before performing file operations.
 
 ---
 
-### 🔄 A Typical Full Workflow
+### Typical Workflow
 
 ```
-1. create_project        → set up "my-app/"
-2. create_directory      → add "src/", "docs/"
-3. create_file           → write starter files
-4. update_file           → refine logic as you go
-5. find_text/search_files→ check for TODOs, locate files
-6. move_file/rename_file → tidy up structure
-7. generate_project_tree → snapshot the layout
-8. generate_readme       → document it
-9. generate_cloud_log    → log what was done
-10. validate_workspace   → sanity-check everything
+1. create_project        → Initialize project directory
+2. create_directory      → Scaffold subfolders (src/, docs/)
+3. create_file           → Write initial source files
+4. update_file           → Edit and refine code incrementally
+5. find_text/search_files→ Locate references or check for TODOs
+6. move_file/rename_file → Organize file structure
+7. generate_project_tree → Save project tree map
+8. generate_readme       → Document setup and usage
+9. generate_cloud_log    → Save AI work log
+10. validate_workspace   → Verify workspace state
 ```
 
 ---
 
-### 🧠 Key Mental Model to Remember
+## Connecting to Claude Desktop
 
-> **workspace-mcp doesn't think for you — it acts on disk for you.**
->
-> The AI still does the reasoning (what code to write, how to structure a game or API, etc.). Workspace-mcp is the hands that turn that reasoning into an organized, documented, real project folder — instead of a wall of code pasted into a chat window that you'd have to assemble yourself.
+Claude Desktop manages MCP servers via its configuration file. Using `uv` allows Claude Desktop to run `workspace-mcp` automatically in the background without needing to start a server manually.
 
----
+### Step 1: Locate `claude_desktop_config.json`
 
-## 🔌 How to Connect to Claude Desktop
-
-### Why Use `uv` for Automatic Server Execution?
-By configuring Claude Desktop with `uv`, **Claude Desktop automatically launches and manages Workspace MCP in the background**. 
-
-You do **not** need to manually open a terminal, activate virtual environments, or run server commands before opening Claude. `uv` handles installation, dependencies, and execution automatically whenever Claude Desktop starts up.
-
-### Step 1: Open `claude_desktop_config.json`
-
-Open the configuration file for your operating system:
-
-| Operating System | Config File Location |
+| OS | Config Path |
 | --- | --- |
-| **Windows** | `%APPDATA%\Claude\claude_desktop_config.json` <br> *(e.g. `C:\Users\YourUsername\AppData\Roaming\Claude\claude_desktop_config.json`)* |
+| **Windows** | `%APPDATA%\Claude\claude_desktop_config.json` |
 | **macOS** | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 | **Linux** | `~/.config/Claude/claude_desktop_config.json` |
 
-### Step 2: Add the Automatic `uv` Configuration
+### Step 2: Add Configuration
 
-Paste the following JSON block into your `claude_desktop_config.json` file. Update the directory paths to match your local installation of `workspace-mcp` and your desired `--workspace-root` folder:
+Add the following to your `claude_desktop_config.json`. Update the paths to point to your local installation of `workspace-mcp` and your desired `--workspace-root` directory:
 
-#### Windows Configuration:
+#### Windows
 ```json
 {
   "mcpServers": {
@@ -175,7 +140,7 @@ Paste the following JSON block into your `claude_desktop_config.json` file. Upda
 }
 ```
 
-#### macOS / Linux Configuration:
+#### macOS / Linux
 ```json
 {
   "mcpServers": {
@@ -194,22 +159,21 @@ Paste the following JSON block into your `claude_desktop_config.json` file. Upda
 }
 ```
 
-> 💡 **Prerequisite**: Make sure `uv` is installed on your system ([install uv](https://github.com/astral-sh/uv)).
+*Note:* Requires [`uv`](https://github.com/astral-sh/uv) to be installed on your system PATH.
 
-### Step 3: Restart & Verify in Claude Desktop
+### Step 3: Restart Claude Desktop
 
-1. Fully quit Claude Desktop (exit from system tray / menu bar).
+1. Fully close Claude Desktop (from system tray or menu bar).
 2. Re-open Claude Desktop.
-3. Click the **hammer icon (🔨)** in the lower-right corner of the chat box.
-4. You will see **22 Workspace MCP tools** active and ready to use!
+3. Click the hammer icon (🔨) in the chat bar to confirm that the **workspace-mcp** tools are active.
 
 ---
 
-## 🛠️ How We Use It (Workflow & Prompts)
+## Usage & Master Prompt
 
-### 🌟 Full-Potential Master Prompt (Unleash All 22 Tools)
+### Comprehensive Master Prompt
 
-To exercise the complete capabilities of Workspace MCP in Claude Desktop, copy and paste this master prompt:
+Copy and paste this prompt into Claude Desktop to test all tool capabilities:
 
 ```text
 Using the workspace MCP, create a new project called [project-name]. Set up the following structure: create a src/ directory, add starter files inside it ([file1], [file2]), and create a top-level README.md and .gitignore.
@@ -225,124 +189,82 @@ Generate the project tree, generate a proper README, and generate a CLOUD.md log
 Finally, validate the workspace configuration, and list the contents of the project root to confirm everything is in place.
 ```
 
-#### 🔍 What Tools This Master Prompt Exercises:
-1. `create_project` / `create_directory` — Initializes project and directory hierarchy.
-2. `create_file` — Creates `src/[file1]`, `src/[file2]`, top-level `README.md`, `.gitignore`.
-3. `append_file` & `update_file` — Appends notes section to `README.md` and updates `[file1]` with feature logic.
-4. `find_text` & `search_files` — Searches code for `TODO`/`FIXME` comments and matches extensions (`*.py`, `*.ts`, etc.).
-5. `rename_file` & `move_file` — Renames `[file2]` to `[new-name]` and moves it into `docs/`.
-6. `generate_project_tree`, `generate_readme`, `generate_cloud_log` — Formats and writes documentation artifacts (`PROJECT_TREE.md`, `README.md`, `CLOUD.md`).
-7. `validate_workspace` & `list_directory` — Verifies workspace configuration health and lists root contents.
+### Resuming Work After Token Limits
 
----
+If Claude hits a completion limit mid-task:
 
-### Workflow 1: Building Full Applications
-Ask Claude Desktop to scaffold a complete project:
-
-> *"Claude, create a new project called `TaskManager` with a FastAPI backend, React frontend, Docker setup, and document everything in `README.md` and `CLOUD.md`."*
-
-Claude automatically invokes `create_project`, creates the directory structure, writes `main.py` and `App.jsx`, and generates documentation directly inside your local `AIProjects/TaskManager` folder.
-
-### Workflow 2: Resuming Work After Token Limits
-If Claude stops mid-task due to token completion limits:
-
-1. Open a new or existing chat with Claude.
+1. Open a new chat session.
 2. Prompt Claude:
-   > *"Check the files in `TaskManager/backend`, read `CLOUD.md` to see what was built, and finish implementing the database models."*
-3. Claude executes `list_directory`, `read_file`, and `write_file` to inspect your local code and seamlessly complete the feature.
+   > "Check the files in `MyProject/src`, review `CLOUD.md` to see what was built so far, and finish implementing the main module."
+3. Claude will use `list_directory`, `read_file`, and `update_file` to continue development.
 
 ---
 
-## 🛡️ Security & Sandboxing Architecture
+## Security Sandbox Architecture
+
+Workspace MCP strictly isolates all operations to the configured `--workspace-root`:
 
 ```
-+-------------------------------------------------------------------+
-|                           CLAUDE DESKTOP                          |
-+-------------------------------------------------------------------+
-                                  |
-                      MCP Stdio Transport (JSON-RPC)
-                                  v
-+-------------------------------------------------------------------+
-|                        WORKSPACE MCP SERVER                       |
-|                       (uv run workspace-mcp)                      |
-+-------------------------------------------------------------------+
-        |                         |                         |
-        v                         v                         v
-+----------------+       +------------------+      +----------------+
-| Pydantic Config|       |   22 FastMCP     |      | Dual Logging   |
-| (settings.py)  |       |   Tool Handlers  |      | Engine         |
-+----------------+       +------------------+      +----------------+
-                                  |
-                                  v
-                         +------------------+
-                         | Service Layer    |
-                         +------------------+
-                                  |
-                                  v
-                         +------------------+
-                         | PathValidator    |
-                         | Realpath Sandbox |
-                         +------------------+
-                                  |
-                      Verified Safe Local Path
-                                  v
-                         +------------------+
-                         | Local Hard Drive |
-                         | (Workspace Root) |
-                         +------------------+
+Claude Desktop (Client)
+       │
+       ▼ Stdio Transport
+Workspace MCP Server
+       │
+       ▼
+  Service Layer ──► PathValidator (os.path.realpath Sandbox)
+                          │
+                          ▼
+                Sandboxed Workspace Root
 ```
 
-### Security Sandbox Features
-- **Strict Single-Root Isolation**: Claude can **only** read, write, or search within your configured `--workspace-root`.
-- **Anti-Traversal Verification**: All paths are checked using `os.path.realpath` / `Path.resolve()` to prevent `..` relative path escapes and symlink exploits.
-- **Confirmation Protection**: Destructive operations (file deletions, full overwrites) require confirmation flags to safeguard against accidental code loss.
-- **Dual Audit Trail**: Logs every tool call to `operations.jsonl` (JSON) and `operations.log` (text) inside your workspace log folder.
+- **Path Security**: All input paths are resolved using `os.path.realpath` / `Path.resolve(strict=False)` to prevent `..` path traversal sequences and symlink escapes.
+- **Reserved Names**: Windows reserved filenames (`CON`, `NUL`, `AUX`, `COM1-9`) are rejected to preserve cross-platform compatibility.
+- **Confirmation Gating**: Destructive actions (`delete_file`, `delete_directory`, file overwrites) require explicit confirmation flags (`confirm=true` / `overwrite=true`).
+- **Audit Logs**: Operations are logged to both `operations.jsonl` (machine-readable) and `operations.log` (human-readable text).
 
 ---
 
-## 🧰 MCP Tools Reference
-
-Workspace MCP provides **22 production tools** organized into 6 functional groups:
+## Tool Reference
 
 | Category | Tool | Description |
 | --- | --- | --- |
 | **Project** | `create_project` | Scaffolds directory structure + `.gitignore`, `Dockerfile`, `README.md`, `CLOUD.md` |
-| | `delete_project` | Permanently deletes a project folder (requires `confirm=true`) |
-| | `rename_project` | Renames or moves a project directory |
-| **Directory** | `create_directory` | Creates directories (including missing parent folders) |
+| | `delete_project` | Removes project folder (requires `confirm=true`) |
+| | `rename_project` | Renames or relocates a project directory |
+| **Directory** | `create_directory` | Creates subdirectories (including missing parents) |
 | | `delete_directory` | Deletes directory recursively (requires `confirm=true`) |
-| | `list_directory` | Lists directory contents, sizes, and file metadata |
-| **File Operations** | `create_file` | Creates a new file with content |
+| | `list_directory` | Lists directory files and metadata |
+| **File** | `create_file` | Creates a new file |
 | | `read_file` | Reads UTF-8 text file content |
-| | `write_file` | Overwrites file content completely (requires `confirm=true`) |
-| | `append_file` | Appends code/text to an existing file |
-| | `update_file` | Targeted string substitution (`find`/`replace`) or partial rewrite |
+| | `write_file` | Overwrites file content (requires `confirm=true`) |
+| | `append_file` | Appends text to end of file |
+| | `update_file` | Performs `find`/`replace` string substitution or partial update |
 | | `move_file` / `rename_file` | Relocates or renames a file |
-| | `delete_file` | Permanently deletes a file (requires `confirm=true`) |
-| **Search** | `search_files` | Glob file search (e.g. `**/*.py`, `src/**/*.ts`) |
-| | `find_text` | Grep-like search across text files for code references |
-| | `project_tree` | Generates ASCII project structure visual string |
-| **Docs** | `generate_readme` | Auto-generates/updates `README.md` |
-| | `generate_cloud_log` | Auto-generates `CLOUD.md` AI work log |
-| | `generate_project_tree` | Saves `PROJECT_TREE.md` diagram to disk |
-| **Validation** | `validate_workspace` | Inspects active server limits and workspace configuration |
-| | `validate_path` | Checks if a path is safe and valid without modifying disk |
+| | `delete_file` | Deletes a file (requires `confirm=true`) |
+| **Search** | `search_files` | Glob search for matching filenames |
+| | `find_text` | Grep-like search across text files |
+| | `project_tree` | Generates ASCII project tree string |
+| **Docs** | `generate_readme` | Creates/updates `README.md` |
+| | `generate_cloud_log` | Creates `CLOUD.md` work log |
+| | `generate_project_tree` | Saves `PROJECT_TREE.md` to disk |
+| **Validation** | `validate_workspace` | Returns server health and settings |
+| | `validate_path` | Validates relative path safety without modifying disk |
 
 ---
 
-## ⚙️ Configuration Reference
+## Configuration
 
-Configure settings via command-line flags or environment variables (`WORKSPACE_MCP_*`):
+Settings can be specified via command-line flags or environment variables (`WORKSPACE_MCP_*`):
 
-| Flag / Option | Environment Variable | Default | Description |
+| Option | Environment Variable | Default | Description |
 | --- | --- | --- | --- |
-| `--workspace-root` | `WORKSPACE_MCP_WORKSPACE_ROOT` | `./workspace` | Target directory for all local project files |
-| `--config` | `WORKSPACE_MCP_CONFIG` | `None` | Optional path to YAML/JSON configuration file |
-| `max_file_size_bytes` | `WORKSPACE_MCP_MAX_FILE_SIZE_BYTES` | `10485760` (10MB) | Max bytes allowed for single file write |
-| `require_overwrite_confirmation` | `WORKSPACE_MCP_REQUIRE_OVERWRITE_CONFIRMATION` | `true` | Requires `confirm=true` on overwrite/delete |
+| `--workspace-root` | `WORKSPACE_MCP_WORKSPACE_ROOT` | `./workspace` | Base sandboxed directory for all operations |
+| `--config` | `WORKSPACE_MCP_CONFIG` | `None` | Path to YAML/JSON configuration file |
+| `max_file_size_bytes` | `WORKSPACE_MCP_MAX_FILE_SIZE_BYTES` | `10485760` (10MB) | File size write limit |
+| `require_overwrite_confirmation` | `WORKSPACE_MCP_REQUIRE_OVERWRITE_CONFIRMATION` | `true` | Enforces confirmation on file overwrite/delete |
 
 ---
 
-## 📄 License & Contributing
+## License
 
-Distributed under the [MIT License](LICENSE). Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Distributed under the [MIT License](LICENSE).
