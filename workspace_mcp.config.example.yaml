@@ -1,0 +1,69 @@
+# Example workspace-mcp configuration.
+#
+# Copy this file to workspace_mcp.config.yaml (same directory you launch the
+# server from) and edit workspace_root, or set WORKSPACE_MCP_WORKSPACE_ROOT
+# as an environment variable instead -- env vars always win over this file.
+
+# The ONE directory the server is allowed to read/write. Everything the AI
+# creates lives under here. Use an absolute path.
+# Windows example: "D:\\AIProjects"
+# Linux/macOS example: "/home/user/AIProjects"
+workspace_root: "/home/user/AIProjects"
+
+# Hard cap, in bytes, on any single file the server will write. 5 MB default.
+max_file_size_bytes: 5242880
+
+# Only files with these extensions may be created/written. Extensionless
+# files (Dockerfile, LICENSE, Makefile, etc.) are always allowed.
+allowed_extensions:
+  - .py
+  - .pyi
+  - .js
+  - .jsx
+  - .ts
+  - .tsx
+  - .json
+  - .yaml
+  - .yml
+  - .toml
+  - .md
+  - .html
+  - .css
+  - .sql
+  - .sh
+  - .txt
+
+# Filenames ignored by list_directory / search_files / find_text.
+ignored_files:
+  - ".DS_Store"
+  - "Thumbs.db"
+
+# Directory names ignored (and never descended into) by search & listing.
+ignored_dirs:
+  - "__pycache__"
+  - ".git"
+  - "node_modules"
+  - ".venv"
+  - "venv"
+  - "dist"
+  - "build"
+
+# All paths below are relative to workspace_root unless given as absolute paths.
+logging_dir: ".workspace_mcp/logs"
+backup_dir: ".workspace_mcp/backups"
+templates_dir: ".workspace_mcp/templates"
+
+# If true, symlinks that resolve *inside* the workspace are permitted.
+# Symlinks that resolve *outside* the workspace are ALWAYS rejected,
+# regardless of this setting.
+allow_symlinks: false
+
+# If true (recommended), overwriting or deleting an existing file/directory
+# requires the caller to pass confirm=True.
+require_overwrite_confirmation: true
+
+# Filenames that can never be modified or deleted through the MCP tools.
+protected_files:
+  - "workspace_mcp.config.yaml"
+  - "workspace_mcp.config.json"
+  - ".workspace_mcp"

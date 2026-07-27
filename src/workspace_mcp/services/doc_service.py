@@ -1,0 +1,250 @@
+"""Documentation generation: README.md, CLOUD.md, PROJECT_TREE.md."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+from workspace_mcp.config.settings import WorkspaceSettings
+from workspace_mcp.models.schemas import CloudLogEntry, NotFoundError
+from workspace_mcp.utils.pathsec import PathValidator
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+class DocService:
+    def __init__(self, settings: WorkspaceSettings, validator: PathValidator) -> None:
+        self.settings = settings
+        self.validator = validator
+
+    # ------------------------------------------------------------------ #
+    # PROJECT_TREE.md
+    # ------------------------------------------------------------------ #
+
+    def render_tree(self, root: Path, *, max_depth: int = 6) -> str:
+        """Render an ASCII directory tree (Unicode box-drawing characters)."""
+        lines: list[str] = [f"{root.name}/"]
+
+        def _walk(directory: Path, prefix: str, depth: int) -> None:
+            if depth > max_depth:
+                return
+            try:
+                children = sorted(
+                    (
+                        c
+                        for c in directory.iterdir()
+                        if c.name not in self.settings.ignored_dirs
+                        and c.name not in self.settings.ignored_files
+                        and not c.name.startswith(".")
+                    ),
+                    key=lambda p: (p.is_file(), p.name.lower()),
+                )
+            except OSError:
+                return
+            for i, child in enumerate(children):
+                is_last = i == len(children) - 1
+                connector = "└── " if is_last else "├── "
+                label = f"{child.name}/" if child.is_dir() else child.name
+                lines.append(f"{prefix}{connector}{label}")
+                if child.is_dir():
+                    extension = "    " if is_last else "│   "
+                    _walk(child, prefix + extension, depth + 1)
+
+        _walk(root, "", 1)
+        return "\n".join(lines)
+
+    def generate_project_tree(self, project_rel_path: str) -> str:
+        project_path = self.validator.resolve(project_rel_path)
+        if not project_path.exists() or not project_path.is_dir():
+            raise NotFoundError(
+                f"No project directory found at '{project_rel_path}'.", path=project_rel_path
+            )
+        tree_text = self.render_tree(project_path)
+        content = (
+            f"# Project Tree: {project_path.name}\n\n"
+            f"Generated: {_now_iso()}\n\n"
+            "```\n"
+            f"{tree_text}\n"
+            "```\n"
+        )
+        out_path = project_path / "PROJECT_TREE.md"
+        out_path.write_text(content, encoding="utf-8")
+        return self.validator.relative_to_root(out_path)
+
+    # ------------------------------------------------------------------ #
+    # README.md
+    # ------------------------------------------------------------------ #
+
+    def generate_readme(
+        self,
+        project_rel_path: str,
+        *,
+        description: str = "",
+        features: Optional[list[str]] = None,
+        installation: str = "",
+        usage: str = "",
+        dependencies: Optional[list[str]] = None,
+        configuration: str = "",
+        tech_stack: Optional[list[str]] = None,
+        future_improvements: Optional[list[str]] = None,
+        license_name: str = "MIT",
+    ) -> str:
+        project_path = self.validator.resolve(project_rel_path)
+        if not project_path.exists() or not project_path.is_dir():
+            raise NotFoundError(
+                f"No project directory found at '{project_rel_path}'.", path=project_rel_path
+            )
+        name = project_path.name
+        features = features or []
+        dependencies = dependencies or []
+        tech_stack = tech_stack or []
+        future_improvements = future_improvements or []
+        tree_text = self.render_tree(project_path)
+
+        def _bullets(items: list[str]) -> str:
+            return "\n".join(f"- {item}" for item in items) if items else "- _TBD_"
+
+        default_inst = "```bash\n# TODO: add installation steps\n```"
+        inst_text = installation or default_inst
+
+        content = f"""# {name}
+
+{description or "_Add a one-paragraph description of this project here._"}
+
+## Features
+
+{_bullets(features)}
+
+## Folder Structure
+
+```
+{tree_text}
+```
+
+## Installation
+
+{inst_text}
+
+## Usage
+
+{usage or "_Add usage instructions here._"}
+
+## Dependencies
+
+{_bullets(dependencies)}
+
+## Configuration
+
+{configuration or "_Document environment variables / config files here._"}
+
+## Tech Stack
+
+{_bullets(tech_stack)}
+
+## Future Improvements
+
+{_bullets(future_improvements)}
+
+## License
+
+{license_name}
+
+---
+*Generated by workspace-mcp on {_now_iso()}.*
+"""
+        out_path = project_path / "README.md"
+        out_path.write_text(content, encoding="utf-8")
+        return self.validator.relative_to_root(out_path)
+
+    # ------------------------------------------------------------------ #
+    # CLOUD.md
+    # ------------------------------------------------------------------ #
+
+    def generate_cloud_log(
+        self,
+        project_rel_path: str,
+        *,
+        goal: str = "",
+        architecture_decisions: Optional[list[str]] = None,
+        files_created: Optional[list[str]] = None,
+        files_updated: Optional[list[str]] = None,
+        implementation_notes: Optional[list[str]] = None,
+        important_decisions: Optional[list[str]] = None,
+        known_limitations: Optional[list[str]] = None,
+        future_work: Optional[list[str]] = None,
+        entries: Optional[list[CloudLogEntry]] = None,
+    ) -> str:
+        project_path = self.validator.resolve(project_rel_path)
+        if not project_path.exists() or not project_path.is_dir():
+            raise NotFoundError(
+                f"No project directory found at '{project_rel_path}'.", path=project_rel_path
+            )
+        tree_text = self.render_tree(project_path)
+
+        def _bullets(items: Optional[list[str]]) -> str:
+            return "\n".join(f"- {item}" for item in items) if items else "- _None recorded_"
+
+        extra_section = ""
+        if entries:
+            by_category: dict[str, list[str]] = {}
+            for e in entries:
+                by_category.setdefault(e.category, []).append(f"{e.description} ({e.timestamp})")
+            extra_section = "\n\n".join(
+                f"### {cat}\n\n" + "\n".join(f"- {d}" for d in descs)
+                for cat, descs in by_category.items()
+            )
+
+        content = f"""# CLOUD.md — AI Work Log
+
+> This document explains exactly what the AI generated in this project and why.
+
+## Project Goal
+
+{goal or "_Not specified._"}
+
+## Architecture Decisions
+
+{_bullets(architecture_decisions)}
+
+## Folder Structure
+
+```
+{tree_text}
+```
+
+## Files Created
+
+{_bullets(files_created)}
+
+## Files Updated
+
+{_bullets(files_updated)}
+
+## Implementation Notes
+
+{_bullets(implementation_notes)}
+
+## Important Decisions
+
+{_bullets(important_decisions)}
+
+## Known Limitations
+
+{_bullets(known_limitations)}
+
+## Future Work
+
+{_bullets(future_work)}
+
+{extra_section}
+
+## Generation Timestamp
+
+{_now_iso()}
+"""
+        out_path = project_path / "CLOUD.md"
+        out_path.write_text(content, encoding="utf-8")
+        return self.validator.relative_to_root(out_path)

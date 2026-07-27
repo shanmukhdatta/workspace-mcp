@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "workspace-mcp": {
+      "command": "workspace-mcp",
+      "args": ["--workspace-root", "/home/user/AIProjects"]
+    }
+  }
+}
