@@ -24,6 +24,7 @@ class DirectoryService:
 
     def create_directory(self, rel_path: str, *, exist_ok: bool = True) -> str:
         path = self.validator.resolve(rel_path)
+        self.validator.assert_not_protected(path)
         if path.exists() and path.is_dir() and not exist_ok:
             raise AlreadyExistsError(f"Directory '{rel_path}' already exists.", path=rel_path)
         if path.exists() and path.is_file():
