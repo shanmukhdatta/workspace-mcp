@@ -56,7 +56,9 @@ class BackupService:
 
     def list_backups(self, path: str = "") -> list[dict]:
         if path:
-            expected = self.validator.resolve(path).relative_to(self.validator.workspace_root).as_posix()
+            expected = (
+                self.validator.resolve(path).relative_to(self.validator.workspace_root).as_posix()
+            )
         else:
             expected = ""
         result = []
