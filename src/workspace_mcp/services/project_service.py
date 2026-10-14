@@ -116,6 +116,7 @@ class ProjectService:
                 structure=[p.name for p in dest.iterdir() if p.is_dir()],
             )
         project_path = self.validator.resolve(name)
+        self.validator.assert_not_protected(project_path)
         if project_path.exists():
             raise AlreadyExistsError(
                 f"A project named '{name}' already exists in the workspace.", path=name
@@ -156,6 +157,7 @@ class ProjectService:
     def delete_project(self, name: str, *, confirm: bool = False) -> str:
         sanitize_project_name(name)
         project_path = self.validator.resolve(name)
+        self.validator.assert_not_protected(project_path)
         if not project_path.exists() or not project_path.is_dir():
             raise NotFoundError(f"No project named '{name}' exists.", path=name)
         if not confirm:
@@ -174,6 +176,8 @@ class ProjectService:
         sanitize_project_name(new_name)
         src = self.validator.resolve(old_name)
         dest = self.validator.resolve(new_name)
+        self.validator.assert_not_protected(src)
+        self.validator.assert_not_protected(dest)
         if not src.exists() or not src.is_dir():
             raise NotFoundError(f"No project named '{old_name}' exists.", path=old_name)
         if dest.exists() and not overwrite:
