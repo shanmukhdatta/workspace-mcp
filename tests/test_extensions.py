@@ -146,7 +146,9 @@ def test_sync_polling(settings):
     assert sync.poll(first["cursor"])["events"] == []
 
 
-def test_server_private_area_cannot_be_targeted(settings, validator, directory_service, project_service, doc_service):
+def test_server_private_area_cannot_be_targeted(
+    settings, validator, directory_service, project_service, doc_service
+):
     private = ".workspace_mcp"
     services = (
         lambda: directory_service.create_directory(private + "/overwrite"),
