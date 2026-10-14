@@ -185,6 +185,7 @@ class FileService:
         src = self.validator.resolve(src_rel)
         dest = self.validator.resolve(dest_rel)
         self.validator.assert_not_protected(src)
+        self.validator.assert_not_protected(dest)
         if not src.exists():
             raise NotFoundError(f"No file found at '{src_rel}'.", path=src_rel)
         if dest.exists() and not overwrite:
@@ -203,6 +204,7 @@ class FileService:
             raise NotFoundError(f"No file found at '{rel_path}'.", path=rel_path)
         dest = src.with_name(new_name)
         self.validator.resolve(str(dest.relative_to(self.validator.workspace_root)))
+        self.validator.assert_not_protected(dest)
         if dest.exists() and not overwrite:
             raise DuplicateFileError(
                 f"'{new_name}' already exists in that directory.", path=new_name
