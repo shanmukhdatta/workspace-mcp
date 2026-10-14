@@ -70,6 +70,7 @@ class IndexService:
 
     def _root(self, project: str) -> Path:
         root = self.validator.resolve(project)
+        self.validator.assert_not_protected(root)
         if root.parent != self.validator.workspace_root or not root.is_dir():
             raise WorkspaceError("Index an existing top-level workspace project.")
         return root
