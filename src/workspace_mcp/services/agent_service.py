@@ -19,6 +19,7 @@ class AgentService:
 
     def _project(self, project: str) -> None:
         path = self.validator.resolve(project)
+        self.validator.assert_not_protected(path)
         if not path.is_dir() or path.parent != self.validator.workspace_root:
             raise WorkspaceError("Agent workflow requires an existing project.")
 
