@@ -79,22 +79,48 @@ class TerminalService:
                 stderr=asyncio.subprocess.PIPE,
                 stdin=asyncio.subprocess.DEVNULL,
             )
+        except OSError as exc:
+            raise WorkspaceError("Could not execute command.", detail=str(exc)) from exc
+        assert process.stdout is not None and process.stderr is not None
+
+        async def capture(stream: asyncio.StreamReader) -> tuple[bytes, bool]:
+            """Drain entire pipe without retaining unlimited output in memory."""
+            saved = bytearray()
+            total = 0
+            while True:
+                chunk = await stream.read(8192)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if len(saved) < MAX_OUTPUT:
+                    saved.extend(chunk[: MAX_OUTPUT - len(saved)])
+            return bytes(saved), total > MAX_OUTPUT
+
+        stdout_task = asyncio.create_task(capture(process.stdout))
+        stderr_task = asyncio.create_task(capture(process.stderr))
+        try:
             try:
-                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+                await asyncio.wait_for(process.wait(), timeout=timeout)
                 timed_out = False
             except asyncio.TimeoutError:
                 process.kill()
-                stdout, stderr = await process.communicate()
+                await process.wait()
                 timed_out = True
-        except OSError as exc:
-            raise WorkspaceError("Could not execute command.", detail=str(exc)) from exc
+            stdout, stdout_truncated = await stdout_task
+            stderr, stderr_truncated = await stderr_task
+        except asyncio.CancelledError:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+            await asyncio.gather(stdout_task, stderr_task)
+            raise
         return {
             "argv": argv,
             "cwd": self.validator.relative_to_root(path),
             "returncode": process.returncode,
             "timed_out": timed_out,
-            "stdout": stdout[:MAX_OUTPUT].decode("utf-8", "replace"),
-            "stderr": stderr[:MAX_OUTPUT].decode("utf-8", "replace"),
-            "stdout_truncated": len(stdout) > MAX_OUTPUT,
-            "stderr_truncated": len(stderr) > MAX_OUTPUT,
+            "stdout": stdout.decode("utf-8", "replace"),
+            "stderr": stderr.decode("utf-8", "replace"),
+            "stdout_truncated": stdout_truncated,
+            "stderr_truncated": stderr_truncated,
         }
