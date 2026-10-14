@@ -40,6 +40,7 @@ def register(mcp: FastMCP, file_service: FileService, logger: OperationLogger) -
         Args:
             path: Path relative to the workspace root.
         """
+
         def _do() -> dict[str, Any]:
             text, info = file_service.read_file(path)
             return {"content": text, "info": info.model_dump(mode="json")}
@@ -110,7 +111,9 @@ def register(mcp: FastMCP, file_service: FileService, logger: OperationLogger) -
         )
 
     @mcp.tool()
-    def move_file(source_path: str, destination_path: str, overwrite: bool = False) -> dict[str, Any]:
+    def move_file(
+        source_path: str, destination_path: str, overwrite: bool = False
+    ) -> dict[str, Any]:
         """Move (or move+rename) a file to a new location within the workspace.
 
         Args:

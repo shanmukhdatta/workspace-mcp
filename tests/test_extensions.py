@@ -1,4 +1,5 @@
 """Contract and regression tests for extension capabilities."""
+
 from __future__ import annotations
 
 import asyncio

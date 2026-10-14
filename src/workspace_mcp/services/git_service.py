@@ -1,4 +1,5 @@
 """Git operations scoped to one validated project; no network subcommands."""
+
 from __future__ import annotations
 
 import re
@@ -19,7 +20,11 @@ class GitService:
 
     def _project(self, project: str) -> Path:
         path = self.validator.resolve(project)
-        if path == self.validator.workspace_root or path.parent != self.validator.workspace_root or not path.is_dir():
+        if (
+            path == self.validator.workspace_root
+            or path.parent != self.validator.workspace_root
+            or not path.is_dir()
+        ):
             raise WorkspaceError("Git project must name an existing top-level workspace project.")
         if (path / ".git").is_symlink():
             raise WorkspaceError("Refusing to use symlinked .git directory.")
@@ -34,13 +39,20 @@ class GitService:
         try:
             proc = subprocess.run(
                 ["git", "-C", str(path), *args],
-                capture_output=True, text=True, errors="replace",
-                timeout=self.settings.command_timeout_seconds, stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                errors="replace",
+                timeout=self.settings.command_timeout_seconds,
+                stdin=subprocess.DEVNULL,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise WorkspaceError("Git command failed.", detail=str(exc)) from exc
-        return {"returncode": proc.returncode, "stdout": proc.stdout[:65536],
-                "stderr": proc.stderr[:65536], "truncated": len(proc.stdout) > 65536 or len(proc.stderr) > 65536}
+        return {
+            "returncode": proc.returncode,
+            "stdout": proc.stdout[:65536],
+            "stderr": proc.stderr[:65536],
+            "truncated": len(proc.stdout) > 65536 or len(proc.stderr) > 65536,
+        }
 
     def init(self, project: str) -> dict:
         return self._run(project, ["init"], initialized=False)
@@ -56,7 +68,11 @@ class GitService:
     def branch(self, project: str, name: str = "", create: bool = False) -> dict:
         if not name and not create:
             return self._run(project, ["branch", "--list"])
-        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.\-/]{0,100}", name) or ".." in name or name.endswith((".", "/", ".lock")):
+        if (
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.\-/]{0,100}", name)
+            or ".." in name
+            or name.endswith((".", "/", ".lock"))
+        ):
             raise WorkspaceError("Invalid Git branch name.")
         return self._run(project, ["branch", name] if create else ["switch", name])
 
@@ -96,4 +112,6 @@ class GitService:
         # Git hooks can execute local scripts. Git will not run hooks for MCP commits.
         disabled_hooks = self.settings.resolved_memory_dir() / "disabled-git-hooks"
         disabled_hooks.mkdir(exist_ok=True)
-        return self._run(project, ["-c", f"core.hooksPath={disabled_hooks}", "commit", "-m", message])
+        return self._run(
+            project, ["-c", f"core.hooksPath={disabled_hooks}", "commit", "-m", message]
+        )

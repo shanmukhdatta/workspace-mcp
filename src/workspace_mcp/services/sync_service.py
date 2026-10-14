@@ -3,6 +3,7 @@
 Native FastMCP supports SSE and streamable HTTP for MCP transport. This module
 exposes a durable, bounded event cursor for workspace changes, not a file watcher.
 """
+
 from __future__ import annotations
 
 import json

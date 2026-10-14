@@ -83,20 +83,26 @@ def build_server(settings: WorkspaceSettings) -> FastMCP:
     doc_tools.register(mcp, doc_service, logger)
     validation_tools.register(mcp, settings, validator, logger)
     extension_tools.register(
-        mcp, TerminalService(settings, validator), GitService(settings, validator),
-        BackupService(settings, validator), TemplateService(settings, validator), logger,
-        IndexService(settings, validator), MemoryService(settings, validator),
-        AgentService(settings, validator), SyncService(settings),
+        mcp,
+        TerminalService(settings, validator),
+        GitService(settings, validator),
+        BackupService(settings, validator),
+        TemplateService(settings, validator),
+        logger,
+        IndexService(settings, validator),
+        MemoryService(settings, validator),
+        AgentService(settings, validator),
+        SyncService(settings),
     )
 
     return mcp
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="workspace-mcp", description="Local Filesystem MCP Server")
-    parser.add_argument(
-        "--config", type=str, default=None, help="Path to a YAML/JSON config file."
+    parser = argparse.ArgumentParser(
+        prog="workspace-mcp", description="Local Filesystem MCP Server"
     )
+    parser.add_argument("--config", type=str, default=None, help="Path to a YAML/JSON config file.")
     parser.add_argument(
         "--workspace-root", type=str, default=None, help="Override the workspace root directory."
     )
@@ -107,7 +113,9 @@ def main() -> None:
         choices=["stdio", "sse", "streamable-http"],
         help="MCP transport to run (default: stdio, used by Claude Desktop).",
     )
-    parser.add_argument("action", nargs="?", choices=["index"], help="Optional command-line operation.")
+    parser.add_argument(
+        "action", nargs="?", choices=["index"], help="Optional command-line operation."
+    )
     parser.add_argument("project", nargs="?", help="Project name for index operation.")
     args = parser.parse_args()
 

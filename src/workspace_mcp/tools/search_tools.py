@@ -71,6 +71,7 @@ def register(
         Args:
             path: Directory to render, relative to the workspace root.
         """
+
         def _do() -> dict[str, str]:
             resolved = search_service.validator.resolve(path)
             return {"tree": doc_service.render_tree(resolved)}

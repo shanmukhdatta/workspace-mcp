@@ -26,28 +26,87 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_ALLOWED_EXTENSIONS: set[str] = {
     # code
-    ".py", ".pyi", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
-    ".java", ".kt", ".go", ".rs", ".c", ".h", ".cpp", ".hpp", ".cs",
-    ".rb", ".php", ".sh", ".bash", ".ps1", ".sql", ".graphql", ".proto",
+    ".py",
+    ".pyi",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".mjs",
+    ".cjs",
+    ".java",
+    ".kt",
+    ".go",
+    ".rs",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".cs",
+    ".rb",
+    ".php",
+    ".sh",
+    ".bash",
+    ".ps1",
+    ".sql",
+    ".graphql",
+    ".proto",
     # web / markup
-    ".html", ".htm", ".css", ".scss", ".sass", ".less", ".vue", ".svelte",
+    ".html",
+    ".htm",
+    ".css",
+    ".scss",
+    ".sass",
+    ".less",
+    ".vue",
+    ".svelte",
     # data / config
-    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".env", ".env.example",
-    ".xml", ".csv", ".txt", ".md", ".mdx", ".rst",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".env",
+    ".env.example",
+    ".xml",
+    ".csv",
+    ".txt",
+    ".md",
+    ".mdx",
+    ".rst",
     # containers / build
-    ".dockerfile", ".gitignore", ".gitattributes", ".editorconfig",
-    ".lock", ".mod", ".sum",
+    ".dockerfile",
+    ".gitignore",
+    ".gitattributes",
+    ".editorconfig",
+    ".lock",
+    ".mod",
+    ".sum",
     # images/docs commonly generated alongside docs (kept conservative)
     ".svg",
 }
 
 DEFAULT_IGNORED_FILES: set[str] = {
-    ".DS_Store", "Thumbs.db", "*.pyc", "*.pyo", ".env.local",
+    ".DS_Store",
+    "Thumbs.db",
+    "*.pyc",
+    "*.pyo",
+    ".env.local",
 }
 
 DEFAULT_IGNORED_DIRS: set[str] = {
-    "__pycache__", ".git", "node_modules", ".venv", "venv",
-    ".mypy_cache", ".pytest_cache", "dist", "build", ".idea", ".vscode",
+    "__pycache__",
+    ".git",
+    "node_modules",
+    ".venv",
+    "venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    "dist",
+    "build",
+    ".idea",
+    ".vscode",
 }
 
 
@@ -110,7 +169,16 @@ class WorkspaceSettings(BaseSettings):
         }
     )
 
-    @field_validator("workspace_root", "logging_dir", "backup_dir", "templates_dir", "index_dir", "memory_dir", "sync_dir", mode="before")
+    @field_validator(
+        "workspace_root",
+        "logging_dir",
+        "backup_dir",
+        "templates_dir",
+        "index_dir",
+        "memory_dir",
+        "sync_dir",
+        mode="before",
+    )
     @classmethod
     def _expand(cls, v: Any) -> Any:
         if isinstance(v, str):

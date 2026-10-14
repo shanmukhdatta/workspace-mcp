@@ -111,11 +111,7 @@ class FileService:
         """Full overwrite of a file's contents (creates it if missing)."""
         path = self.validator.resolve(rel_path)
         self.validator.assert_not_protected(path)
-        if (
-            path.exists()
-            and self.settings.require_overwrite_confirmation
-            and not confirm
-        ):
+        if path.exists() and self.settings.require_overwrite_confirmation and not confirm:
             raise ConfirmationRequiredError(
                 f"'{rel_path}' already exists. Pass confirm=True to "
                 "overwrite it (this replaces the entire file content).",
@@ -133,8 +129,7 @@ class FileService:
         self.validator.assert_not_protected(path)
         if not path.exists():
             raise NotFoundError(
-                f"Cannot append: no file exists at '{rel_path}'. Use "
-                "create_file first.",
+                f"Cannot append: no file exists at '{rel_path}'. Use " "create_file first.",
                 path=rel_path,
             )
         self._check_extension(path)
@@ -193,9 +188,7 @@ class FileService:
         if not src.exists():
             raise NotFoundError(f"No file found at '{src_rel}'.", path=src_rel)
         if dest.exists() and not overwrite:
-            raise DuplicateFileError(
-                f"Destination '{dest_rel}' already exists.", path=dest_rel
-            )
+            raise DuplicateFileError(f"Destination '{dest_rel}' already exists.", path=dest_rel)
         self._check_extension(dest)
         self._backup(dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -211,7 +204,9 @@ class FileService:
         dest = src.with_name(new_name)
         self.validator.resolve(str(dest.relative_to(self.validator.workspace_root)))
         if dest.exists() and not overwrite:
-            raise DuplicateFileError(f"'{new_name}' already exists in that directory.", path=new_name)
+            raise DuplicateFileError(
+                f"'{new_name}' already exists in that directory.", path=new_name
+            )
         self._backup(dest)
         src.replace(dest)
         return self._info(dest)

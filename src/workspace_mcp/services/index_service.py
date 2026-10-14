@@ -4,6 +4,7 @@ The lexical mode is not claimed to be semantic search. To enable genuine semanti
 retrieval supply a local SentenceTransformer model path and install the optional
 embedding extra. The library never downloads a model by itself.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +19,20 @@ from workspace_mcp.models.schemas import WorkspaceError
 from workspace_mcp.utils.pathsec import PathValidator
 
 TOKEN = re.compile(r"[A-Za-z_][A-Za-z_0-9]{1,}")
-EXTENSIONS = {".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".md", ".java", ".c", ".cpp", ".json"}
+EXTENSIONS = {
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".rs",
+    ".go",
+    ".md",
+    ".java",
+    ".c",
+    ".cpp",
+    ".json",
+}
 
 
 class IndexService:
@@ -44,7 +58,9 @@ class IndexService:
             try:
                 from sentence_transformers import SentenceTransformer
             except ImportError as exc:
-                raise WorkspaceError("Install sentence-transformers into this environment to enable local semantic search.") from exc
+                raise WorkspaceError(
+                    "Install sentence-transformers into this environment to enable local semantic search."
+                ) from exc
             # A locally available model is required; no implicit internet downloads.
             model = Path(self.settings.semantic_model_path)
             if not model.is_dir():
@@ -67,15 +83,19 @@ class IndexService:
         updated = 0
         skipped = 0
         with self._connect() as db:
-            previous = dict(db.execute(
-                "SELECT path, MAX(filehash) FROM chunks WHERE project=? GROUP BY path",
-                (project,),
-            ).fetchall())
+            previous = dict(
+                db.execute(
+                    "SELECT path, MAX(filehash) FROM chunks WHERE project=? GROUP BY path",
+                    (project,),
+                ).fetchall()
+            )
             for path in root.rglob("*"):
                 if len(visited) >= max_files:
                     break
-                if any(part in self.settings.ignored_dirs or part == ".workspace_mcp"
-                       for part in path.relative_to(root).parts):
+                if any(
+                    part in self.settings.ignored_dirs or part == ".workspace_mcp"
+                    for part in path.relative_to(root).parts
+                ):
                     continue
                 if path.is_symlink() or not path.is_file() or path.suffix.lower() not in EXTENSIONS:
                     continue
@@ -93,22 +113,29 @@ class IndexService:
                     continue
                 # Line-aligned bounded chunks; no response contains unlimited source code.
                 lines = raw.splitlines(keepends=True)
-                chunks = ["".join(lines[i:i+60])[:12000] for i in range(0, len(lines), 60)]
+                chunks = ["".join(lines[i : i + 60])[:12000] for i in range(0, len(lines), 60)]
                 db.execute("DELETE FROM chunks WHERE project=? AND path=?", (project, rel))
                 for i, chunk in enumerate(chunks):
                     vector = None
                     if model is not None:
                         vector = json.dumps(model.encode(chunk).tolist())
-                    db.execute("INSERT INTO chunks VALUES(?,?,?,?,?,?)",
-                               (project, rel, i, filehash, chunk, vector))
+                    db.execute(
+                        "INSERT INTO chunks VALUES(?,?,?,?,?,?)",
+                        (project, rel, i, filehash, chunk, vector),
+                    )
                 updated += 1
             # Do not prune unseen files if the scan was bounded by max_files.
             if len(visited) < max_files:
                 for old in set(previous) - visited:
                     db.execute("DELETE FROM chunks WHERE project=? AND path=?", (project, old))
-        return {"project": project, "updated_files": updated, "unchanged_files": skipped,
-                "scanned_files": len(visited), "mode": "semantic" if model else "lexical",
-                "scan_complete": len(visited) < max_files}
+        return {
+            "project": project,
+            "updated_files": updated,
+            "unchanged_files": skipped,
+            "scanned_files": len(visited),
+            "mode": "semantic" if model else "lexical",
+            "scan_complete": len(visited) < max_files,
+        }
 
     def search(self, project: str, query: str, limit: int = 10) -> dict:
         self._root(project)
@@ -124,8 +151,8 @@ class IndexService:
             ):
                 if query_vector is not None and vec is not None:
                     vector = json.loads(vec)
-                    dot = sum(a*b for a, b in zip(query_vector, vector))
-                    norm = math.sqrt(sum(a*a for a in query_vector) * sum(b*b for b in vector))
+                    dot = sum(a * b for a, b in zip(query_vector, vector))
+                    norm = math.sqrt(sum(a * a for a in query_vector) * sum(b * b for b in vector))
                     score = dot / norm if norm else 0
                 else:
                     found = set(t.lower() for t in TOKEN.findall(body))
@@ -133,6 +160,11 @@ class IndexService:
                 if score > 0:
                     hits.append((score, path, part, body))
         hits.sort(key=lambda h: (-h[0], h[1], h[2]))
-        return {"project": project, "mode": "semantic" if model else "lexical",
-                "results": [{"score": round(score, 5), "path": path, "part": part,
-                             "excerpt": body[:1200]} for score, path, part, body in hits[:limit]]}
+        return {
+            "project": project,
+            "mode": "semantic" if model else "lexical",
+            "results": [
+                {"score": round(score, 5), "path": path, "part": part, "excerpt": body[:1200]}
+                for score, path, part, body in hits[:limit]
+            ],
+        }

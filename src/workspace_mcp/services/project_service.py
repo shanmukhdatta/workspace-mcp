@@ -107,6 +107,7 @@ class ProjectService:
                 name, template, template_variables
             )
             from datetime import datetime, timezone
+
             dest = self.validator.resolve(name)
             return ProjectInfo(
                 name=name,
@@ -128,7 +129,9 @@ class ProjectService:
         (project_path / ".gitignore").write_text(_GITIGNORE_TEMPLATE, encoding="utf-8")
         if include_docker:
             (project_path / "Dockerfile").write_text(_DOCKERFILE_TEMPLATE, encoding="utf-8")
-            (project_path / "docker-compose.yml").write_text(_DOCKER_COMPOSE_TEMPLATE, encoding="utf-8")
+            (project_path / "docker-compose.yml").write_text(
+                _DOCKER_COMPOSE_TEMPLATE, encoding="utf-8"
+            )
 
         self.docs.generate_project_tree(name)
         self.docs.generate_readme(name, description=description, tech_stack=folders)
@@ -164,7 +167,9 @@ class ProjectService:
         shutil.rmtree(project_path)
         return name
 
-    def rename_project(self, old_name: str, new_name: str, *, overwrite: bool = False) -> ProjectInfo:
+    def rename_project(
+        self, old_name: str, new_name: str, *, overwrite: bool = False
+    ) -> ProjectInfo:
         sanitize_project_name(old_name)
         sanitize_project_name(new_name)
         src = self.validator.resolve(old_name)
@@ -172,15 +177,15 @@ class ProjectService:
         if not src.exists() or not src.is_dir():
             raise NotFoundError(f"No project named '{old_name}' exists.", path=old_name)
         if dest.exists() and not overwrite:
-            raise AlreadyExistsError(
-                f"A project named '{new_name}' already exists.", path=new_name
-            )
+            raise AlreadyExistsError(f"A project named '{new_name}' already exists.", path=new_name)
         src.replace(dest)
 
         from datetime import datetime, timezone
 
         structure = [
-            p.name for p in dest.iterdir() if p.is_dir() and p.name not in self.settings.ignored_dirs
+            p.name
+            for p in dest.iterdir()
+            if p.is_dir() and p.name not in self.settings.ignored_dirs
         ]
         return ProjectInfo(
             name=new_name,

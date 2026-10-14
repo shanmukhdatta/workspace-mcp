@@ -3,6 +3,7 @@
 Snapshots live outside the projects in the protected .workspace_mcp directory.
 Only previously validated workspace files may be snapshotted/restored.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -31,7 +32,9 @@ class BackupService:
         if not path.is_file() or path.is_symlink():
             return None
         if path.stat().st_size > self.settings.max_backup_file_size_bytes:
-            raise WorkspaceError("File exceeds backup size limit; mutation cancelled.", path=str(rel))
+            raise WorkspaceError(
+                "File exceeds backup size limit; mutation cancelled.", path=str(rel)
+            )
         backup_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex
         dest = self.root / backup_id
         dest.mkdir(parents=True, exist_ok=False)

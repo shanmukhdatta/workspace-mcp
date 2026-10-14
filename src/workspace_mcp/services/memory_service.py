@@ -1,4 +1,5 @@
 """Persistent, project-scoped knowledge graph of facts and typed relations."""
+
 from __future__ import annotations
 
 import json
@@ -45,10 +46,18 @@ class MemoryService:
             raise WorkspaceError("Unsupported knowledge type.")
         if not title.strip() or len(title) > 300 or len(content) > 20000:
             raise WorkspaceError("Invalid memory title/content.")
-        fact = {"id": uuid.uuid4().hex, "project": project, "kind": kind,
-                "title": title, "content": content, "created": utcnow()}
+        fact = {
+            "id": uuid.uuid4().hex,
+            "project": project,
+            "kind": kind,
+            "title": title,
+            "content": content,
+            "created": utcnow(),
+        }
         with self._connect() as db:
-            db.execute("INSERT INTO facts VALUES(:id,:project,:kind,:title,:content,:created)", fact)
+            db.execute(
+                "INSERT INTO facts VALUES(:id,:project,:kind,:title,:content,:created)", fact
+            )
         return fact
 
     def link(self, project: str, source: str, target: str, relation: str) -> dict:
@@ -62,9 +71,17 @@ class MemoryService:
             ).fetchone()[0]
             if count != 2 or source == target:
                 raise NotFoundError("Both distinct facts must belong to the same project.")
-            edge = {"id": uuid.uuid4().hex, "project": project, "source": source,
-                    "target": target, "kind": relation, "created": utcnow()}
-            db.execute("INSERT INTO edges VALUES(:id,:project,:source,:target,:kind,:created)", edge)
+            edge = {
+                "id": uuid.uuid4().hex,
+                "project": project,
+                "source": source,
+                "target": target,
+                "kind": relation,
+                "created": utcnow(),
+            }
+            db.execute(
+                "INSERT INTO edges VALUES(:id,:project,:source,:target,:kind,:created)", edge
+            )
         return edge
 
     def query(self, project: str, text: str = "", limit: int = 40) -> dict:
@@ -76,13 +93,18 @@ class MemoryService:
             facts = db.execute(
                 """SELECT id,kind,title,content,created FROM facts
                 WHERE project=? AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')
-                ORDER BY created DESC LIMIT ?""", (project, pattern, pattern, limit)
+                ORDER BY created DESC LIMIT ?""",
+                (project, pattern, pattern, limit),
             ).fetchall()
             edges = db.execute(
                 "SELECT id,source,target,kind,created FROM edges WHERE project=? ORDER BY created DESC LIMIT ?",
                 (project, limit),
             ).fetchall()
-        return {"facts": [dict(zip(("id", "kind", "title", "content", "created"), row))
-                          for row in facts],
-                "relations": [dict(zip(("id", "source", "target", "kind", "created"), row))
-                              for row in edges]}
+        return {
+            "facts": [
+                dict(zip(("id", "kind", "title", "content", "created"), row)) for row in facts
+            ],
+            "relations": [
+                dict(zip(("id", "source", "target", "kind", "created"), row)) for row in edges
+            ],
+        }

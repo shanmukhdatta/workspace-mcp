@@ -1,4 +1,5 @@
 """Persistent task coordination between clients/agents; does not invoke an LLM."""
+
 from __future__ import annotations
 
 import json
@@ -41,9 +42,20 @@ class AgentService:
             raise WorkspaceError("Task context too large.")
         task_id = uuid.uuid4().hex
         with self._connect() as db:
-            db.execute("INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)",
-                       (task_id, project, role, goal, encoded, "queued", None, None,
-                        datetime.now(timezone.utc).isoformat()))
+            db.execute(
+                "INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    task_id,
+                    project,
+                    role,
+                    goal,
+                    encoded,
+                    "queued",
+                    None,
+                    None,
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
         return {"task_id": task_id, "status": "queued", "role": role}
 
     def claim(self, project: str, task_id: str, assignee: str) -> dict:
@@ -60,8 +72,9 @@ class AgentService:
                 raise WorkspaceError("Task not found or already claimed.")
         return {"task_id": task_id, "status": "running", "assignee": assignee}
 
-    def finish(self, project: str, task_id: str, assignee: str,
-               result: str, succeeded: bool = True) -> dict:
+    def finish(
+        self, project: str, task_id: str, assignee: str, result: str, succeeded: bool = True
+    ) -> dict:
         self._project(project)
         if len(result) > 20000:
             raise WorkspaceError("Result too long.")
@@ -86,6 +99,20 @@ class AgentService:
                 (project, status, status),
             )
             return [
-                dict(zip(("id", "role", "goal", "context", "status", "assignee", "result", "created"), row))
+                dict(
+                    zip(
+                        (
+                            "id",
+                            "role",
+                            "goal",
+                            "context",
+                            "status",
+                            "assignee",
+                            "result",
+                            "created",
+                        ),
+                        row,
+                    )
+                )
                 for row in cursor.fetchall()
             ]

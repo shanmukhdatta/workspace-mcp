@@ -38,7 +38,10 @@ from workspace_mcp.models.schemas import (
 # Windows reserved device names -- rejected on every platform for portability
 # of projects the server generates.
 _WINDOWS_RESERVED = {
-    "CON", "PRN", "AUX", "NUL",
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
     *{f"COM{i}" for i in range(1, 10)},
     *{f"LPT{i}" for i in range(1, 10)},
 }
@@ -65,9 +68,7 @@ def sanitize_name(name: str, *, kind: str = "path segment") -> str:
     if not name or name in (".", ".."):
         raise InvalidPathError(f"Invalid {kind}: {name!r}", value=name)
     if "/" in name or "\\" in name:
-        raise InvalidPathError(
-            f"{kind} must not contain path separators: {name!r}", value=name
-        )
+        raise InvalidPathError(f"{kind} must not contain path separators: {name!r}", value=name)
     stem = name.split(".")[0].upper()
     if stem in _WINDOWS_RESERVED:
         raise InvalidPathError(f"{kind} uses a reserved device name: {name!r}", value=name)

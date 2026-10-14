@@ -33,7 +33,9 @@ class DirectoryService:
         path.mkdir(parents=True, exist_ok=True)
         return self.validator.relative_to_root(path)
 
-    def delete_directory(self, rel_path: str, *, confirm: bool = False, recursive: bool = True) -> str:
+    def delete_directory(
+        self, rel_path: str, *, confirm: bool = False, recursive: bool = True
+    ) -> str:
         path = self.validator.resolve(rel_path)
         self.validator.assert_not_protected(path)
         if path == self.validator.workspace_root:
@@ -52,14 +54,19 @@ class DirectoryService:
             path.rmdir()
         return self.validator.relative_to_root(path)
 
-    def list_directory(self, rel_path: str = ".", *, include_hidden: bool = False) -> list[DirectoryEntryInfo]:
+    def list_directory(
+        self, rel_path: str = ".", *, include_hidden: bool = False
+    ) -> list[DirectoryEntryInfo]:
         path = self.validator.resolve(rel_path)
         if not path.exists() or not path.is_dir():
             raise NotFoundError(f"No directory found at '{rel_path}'.", path=rel_path)
 
         entries: list[DirectoryEntryInfo] = []
         for child in sorted(path.iterdir(), key=lambda p: (p.is_file(), p.name.lower())):
-            if child.name in self.settings.ignored_dirs or child.name in self.settings.ignored_files:
+            if (
+                child.name in self.settings.ignored_dirs
+                or child.name in self.settings.ignored_files
+            ):
                 continue
             if not include_hidden and child.name.startswith("."):
                 continue

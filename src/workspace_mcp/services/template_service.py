@@ -1,4 +1,5 @@
 """Parameterized project templates inside a protected server-owned registry."""
+
 from __future__ import annotations
 
 import re
@@ -7,7 +8,6 @@ from pathlib import Path
 from workspace_mcp.config.settings import WorkspaceSettings
 from workspace_mcp.models.schemas import AlreadyExistsError, NotFoundError, WorkspaceError
 from workspace_mcp.utils.pathsec import PathValidator, sanitize_project_name, sanitize_name
-
 
 # Built-ins are deliberately small starting points, not claims of complete applications.
 BUILTINS = {
@@ -37,8 +37,11 @@ class TemplateService:
         self.validator = validator
 
     def list_templates(self) -> list[str]:
-        custom = [p.name for p in self.settings.resolved_templates_dir().iterdir()
-                  if p.is_dir() and not p.is_symlink()]
+        custom = [
+            p.name
+            for p in self.settings.resolved_templates_dir().iterdir()
+            if p.is_dir() and not p.is_symlink()
+        ]
         return sorted(set(BUILTINS) | set(custom))
 
     def create(self, name: str, template: str, variables: dict[str, str] | None = None) -> dict:
@@ -49,14 +52,22 @@ class TemplateService:
             raise AlreadyExistsError("Project already exists.", path=name)
         vals = {"project_name": name, "project_slug": re.sub(r"[^a-z0-9_-]", "-", name.lower())}
         for key, val in (variables or {}).items():
-            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,40}", key) or not isinstance(val, str) or len(val) > 4000:
+            if (
+                not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,40}", key)
+                or not isinstance(val, str)
+                or len(val) > 4000
+            ):
                 raise WorkspaceError("Invalid template parameter.")
             vals[key] = val
         registry = self.settings.resolved_templates_dir()
         folder = registry / template
         if template in BUILTINS:
             content = BUILTINS[template]
-        elif folder.is_dir() and not folder.is_symlink() and folder.resolve().is_relative_to(registry.resolve()):
+        elif (
+            folder.is_dir()
+            and not folder.is_symlink()
+            and folder.resolve().is_relative_to(registry.resolve())
+        ):
             content = {}
             for p in folder.rglob("*"):
                 if p.is_symlink():
@@ -70,13 +81,16 @@ class TemplateService:
                 content[p.relative_to(folder).as_posix()] = p.read_text(encoding="utf-8")
         else:
             raise NotFoundError("Unknown template.", template=template)
+
         def render(s: str) -> str:
             def replace(m: re.Match[str]) -> str:
                 key = m.group(1)
                 if key not in vals:
                     raise WorkspaceError("Missing template parameter.", parameter=key)
                 return vals[key]
+
             return re.sub(r"\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}", replace, s)
+
         rendered = {}
         for rel, value in content.items():
             rel = render(rel)
@@ -94,6 +108,7 @@ class TemplateService:
                 path.write_text(value, encoding="utf-8")
         except Exception:
             import shutil
+
             shutil.rmtree(dest)
             raise
         return {"project": name, "template": template, "files": len(rendered)}

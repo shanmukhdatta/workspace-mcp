@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from workspace_mcp.models.schemas import AlreadyExistsError, ConfirmationRequiredError, NotFoundError
+from workspace_mcp.models.schemas import (
+    AlreadyExistsError,
+    ConfirmationRequiredError,
+    NotFoundError,
+)
 from workspace_mcp.services.project_service import DEFAULT_STRUCTURE, ProjectService
 
 
