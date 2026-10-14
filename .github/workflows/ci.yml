@@ -8,9 +8,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12"]
 
     steps:
@@ -37,6 +38,9 @@ jobs:
       - name: Run Mypy static type check
         run: |
           uv run mypy src
+
+      - name: Compile Python source
+        run: uv run python -m compileall -q src
 
       - name: Run Pytest test suite
         run: |
