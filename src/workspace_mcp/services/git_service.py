@@ -20,6 +20,7 @@ class GitService:
 
     def _project(self, project: str) -> Path:
         path = self.validator.resolve(project)
+        self.validator.assert_not_protected(path)
         if (
             path == self.validator.workspace_root
             or path.parent != self.validator.workspace_root
