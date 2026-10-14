@@ -1,0 +1,34 @@
+name: Format extension branch (temporary)
+on:
+  push:
+    branches: [extension]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  black:
+    if: github.ref == 'refs/heads/extension'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: extension
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra dev
+      - name: Format extension code
+        run: uv run black src tests
+      - name: Commit formatting (extension only)
+        run: |
+          if ! git diff --quiet -- src tests; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src tests
+            git commit -m "style: format extension sources with Black"
+            git push origin HEAD:extension
+          fi
