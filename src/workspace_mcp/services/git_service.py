@@ -94,4 +94,6 @@ class GitService:
         if added["returncode"] != 0:
             return added
         # Git hooks can execute local scripts. Git will not run hooks for MCP commits.
-        return self._run(project, ["-c", "core.hooksPath=/dev/null", "commit", "-m", message])
+        disabled_hooks = self.settings.resolved_memory_dir() / "disabled-git-hooks"
+        disabled_hooks.mkdir(exist_ok=True)
+        return self._run(project, ["-c", f"core.hooksPath={disabled_hooks}", "commit", "-m", message])

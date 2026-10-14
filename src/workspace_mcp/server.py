@@ -32,6 +32,10 @@ from workspace_mcp.services.backup_service import BackupService
 from workspace_mcp.services.terminal_service import TerminalService
 from workspace_mcp.services.git_service import GitService
 from workspace_mcp.services.template_service import TemplateService
+from workspace_mcp.services.index_service import IndexService
+from workspace_mcp.services.memory_service import MemoryService
+from workspace_mcp.services.agent_service import AgentService
+from workspace_mcp.services.sync_service import SyncService
 from workspace_mcp.tools import extension_tools
 from workspace_mcp.tools import (
     directory_tools,
@@ -81,6 +85,8 @@ def build_server(settings: WorkspaceSettings) -> FastMCP:
     extension_tools.register(
         mcp, TerminalService(settings, validator), GitService(settings, validator),
         BackupService(settings, validator), TemplateService(settings, validator), logger,
+        IndexService(settings, validator), MemoryService(settings, validator),
+        AgentService(settings, validator), SyncService(settings),
     )
 
     return mcp
@@ -101,12 +107,27 @@ def main() -> None:
         choices=["stdio", "sse", "streamable-http"],
         help="MCP transport to run (default: stdio, used by Claude Desktop).",
     )
+    parser.add_argument("action", nargs="?", choices=["index"], help="Optional command-line operation.")
+    parser.add_argument("project", nargs="?", help="Project name for index operation.")
     args = parser.parse_args()
 
     settings = load_settings(args.config)
     if args.workspace_root:
         settings = settings.model_copy(update={"workspace_root": Path(args.workspace_root)})
         settings.ensure_directories()
+
+    if args.action == "index":
+        if not args.project:
+            parser.error("index requires a project name.")
+        import json
+
+        validator = PathValidator(
+            settings.workspace_root,
+            allow_symlinks=settings.allow_symlinks,
+            protected_files=settings.protected_files,
+        )
+        print(json.dumps(IndexService(settings, validator).index(args.project), indent=2))
+        return
 
     mcp = build_server(settings)
     mcp.run(transport=args.transport)

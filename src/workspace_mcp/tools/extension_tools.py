@@ -8,11 +8,17 @@ from workspace_mcp.services.terminal_service import TerminalService
 from workspace_mcp.services.git_service import GitService
 from workspace_mcp.services.backup_service import BackupService
 from workspace_mcp.services.template_service import TemplateService
+from workspace_mcp.services.index_service import IndexService
+from workspace_mcp.services.memory_service import MemoryService
+from workspace_mcp.services.agent_service import AgentService
+from workspace_mcp.services.sync_service import SyncService
 from workspace_mcp.tools._common import run_tool, run_tool_async
 
 
 def register(mcp: FastMCP, terminal: TerminalService, git: GitService,
-             backup: BackupService, templates: TemplateService, logger: OperationLogger) -> None:
+             backup: BackupService, templates: TemplateService, logger: OperationLogger,
+             index: IndexService, memory: MemoryService,
+             agents: AgentService, sync: SyncService) -> None:
     @mcp.tool()
     async def run_command(argv: list[str], cwd: str, timeout: int = 60) -> dict[str, Any]:
         """Run an explicitly allowed developer CLI without a shell (disabled by default)."""
@@ -70,3 +76,65 @@ def register(mcp: FastMCP, terminal: TerminalService, git: GitService,
         """List built-in and administrator-supplied project scaffold templates."""
         return run_tool(logger, operation="List Templates", target_path="",
                         fn=templates.list_templates)
+
+    @mcp.tool()
+    def index_project(project: str, max_files: int = 5000) -> dict[str, Any]:
+        """Incrementally index project source in SQLite; optional local semantic embeddings."""
+        return run_tool(logger, operation="Index Project", target_path=project,
+                        fn=lambda: index.index(project, max_files))
+
+    @mcp.tool()
+    def search_code(project: str, query: str, limit: int = 10) -> dict[str, Any]:
+        """Search indexed code; reports lexical/semantic mode explicitly."""
+        return run_tool(logger, operation="Search Code", target_path=project,
+                        fn=lambda: index.search(project, query, limit))
+
+    @mcp.tool()
+    def remember_fact(project: str, kind: str, title: str, content: str) -> dict[str, Any]:
+        """Store an architectural decision, dependency, API contract, TODO, or other fact."""
+        return run_tool(logger, operation="Remember Fact", target_path=project,
+                        fn=lambda: memory.remember(project, kind, title, content))
+
+    @mcp.tool()
+    def link_facts(project: str, source: str, target: str, relation: str) -> dict[str, Any]:
+        """Create a knowledge-graph relation between two project facts."""
+        return run_tool(logger, operation="Link Facts", target_path=project,
+                        fn=lambda: memory.link(project, source, target, relation))
+
+    @mcp.tool()
+    def query_memory(project: str, text: str = "", limit: int = 40) -> dict[str, Any]:
+        """Retrieve project facts and dependency relationships across sessions."""
+        return run_tool(logger, operation="Query Memory", target_path=project,
+                        fn=lambda: memory.query(project, text, limit))
+
+    @mcp.tool()
+    def agent_submit(project: str, role: str, goal: str,
+                     context: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Queue a task for a client-side architect/implementer/reviewer/tester/researcher agent."""
+        return run_tool(logger, operation="Agent Submit", target_path=project,
+                        fn=lambda: agents.submit(project, role, goal, context))
+
+    @mcp.tool()
+    def agent_claim(project: str, task_id: str, assignee: str) -> dict[str, Any]:
+        """Claim queued work with an atomic transition to running."""
+        return run_tool(logger, operation="Agent Claim", target_path=project,
+                        fn=lambda: agents.claim(project, task_id, assignee))
+
+    @mcp.tool()
+    def agent_finish(project: str, task_id: str, assignee: str,
+                     result: str, succeeded: bool = True) -> dict[str, Any]:
+        """Record the assignee's outcome; does not generate or execute AI work."""
+        return run_tool(logger, operation="Agent Finish", target_path=project,
+                        fn=lambda: agents.finish(project, task_id, assignee, result, succeeded))
+
+    @mcp.tool()
+    def agent_tasks(project: str, status: str = "") -> dict[str, Any]:
+        """List queued, running, completed, and failed tasks for a project."""
+        return run_tool(logger, operation="Agent Tasks", target_path=project,
+                        fn=lambda: agents.list_tasks(project, status))
+
+    @mcp.tool()
+    def sync_events(cursor: int = 0, limit: int = 50) -> dict[str, Any]:
+        """Poll recent workspace operation events using a resumable byte cursor."""
+        return run_tool(logger, operation="Sync Events", target_path="",
+                        fn=lambda: sync.poll(cursor, limit))

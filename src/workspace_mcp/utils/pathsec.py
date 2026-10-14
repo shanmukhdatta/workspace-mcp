@@ -150,7 +150,9 @@ class PathValidator:
         return resolved
 
     def assert_not_protected(self, path: Path) -> None:
-        if path.name in self.protected_files:
+        # Server-private children must remain unreachable through file tools.
+        rel = path.relative_to(self.workspace_root)
+        if ".workspace_mcp" in rel.parts or path.name in self.protected_files:
             raise ProtectedFileError(
                 f"'{path.name}' is a protected server file and cannot be "
                 "modified or deleted through the MCP tools.",

@@ -103,7 +103,7 @@ class ProjectService:
     ) -> ProjectInfo:
         sanitize_project_name(name)
         if template:
-            template_result = TemplateService(self.settings, self.validator).create(
+            TemplateService(self.settings, self.validator).create(
                 name, template, template_variables
             )
             from datetime import datetime, timezone

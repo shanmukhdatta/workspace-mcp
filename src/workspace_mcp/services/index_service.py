@@ -44,7 +44,7 @@ class IndexService:
             try:
                 from sentence_transformers import SentenceTransformer
             except ImportError as exc:
-                raise WorkspaceError("Install workspace-mcp[embeddings] to enable local semantic search.") from exc
+                raise WorkspaceError("Install sentence-transformers into this environment to enable local semantic search.") from exc
             # A locally available model is required; no implicit internet downloads.
             model = Path(self.settings.semantic_model_path)
             if not model.is_dir():
