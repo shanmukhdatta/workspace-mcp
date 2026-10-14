@@ -28,6 +28,11 @@ from workspace_mcp.services.doc_service import DocService
 from workspace_mcp.services.file_service import FileService
 from workspace_mcp.services.project_service import ProjectService
 from workspace_mcp.services.search_service import SearchService
+from workspace_mcp.services.backup_service import BackupService
+from workspace_mcp.services.terminal_service import TerminalService
+from workspace_mcp.services.git_service import GitService
+from workspace_mcp.services.template_service import TemplateService
+from workspace_mcp.tools import extension_tools
 from workspace_mcp.tools import (
     directory_tools,
     doc_tools,
@@ -73,6 +78,10 @@ def build_server(settings: WorkspaceSettings) -> FastMCP:
     search_tools.register(mcp, search_service, doc_service, logger)
     doc_tools.register(mcp, doc_service, logger)
     validation_tools.register(mcp, settings, validator, logger)
+    extension_tools.register(
+        mcp, TerminalService(settings, validator), GitService(settings, validator),
+        BackupService(settings, validator), TemplateService(settings, validator), logger,
+    )
 
     return mcp
 

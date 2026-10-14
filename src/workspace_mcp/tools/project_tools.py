@@ -18,6 +18,8 @@ def register(mcp: FastMCP, project_service: ProjectService, logger: OperationLog
         structure: Optional[list[str]] = None,
         description: str = "",
         include_docker: bool = True,
+        template: Optional[str] = None,
+        template_variables: Optional[dict[str, str]] = None,
     ) -> dict[str, Any]:
         """Create a new project inside the workspace with a conventional
         folder structure (frontend/backend/database/docker/scripts/tests/
@@ -41,6 +43,8 @@ def register(mcp: FastMCP, project_service: ProjectService, logger: OperationLog
                 structure=structure,
                 description=description,
                 include_docker=include_docker,
+                template=template,
+                template_variables=template_variables,
             ),
         )
 

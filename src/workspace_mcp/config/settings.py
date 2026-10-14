@@ -77,7 +77,18 @@ class WorkspaceSettings(BaseSettings):
     ignored_files: set[str] = Field(default_factory=lambda: set(DEFAULT_IGNORED_FILES))
     ignored_dirs: set[str] = Field(default_factory=lambda: set(DEFAULT_IGNORED_DIRS))
 
+    # New capabilities are gated independently; unsafe process execution is off by default.
+    enable_terminal: bool = False
+    enable_git: bool = False
+    enable_backups: bool = True
+    max_backup_file_size_bytes: int = 25 * 1024 * 1024
+    command_timeout_seconds: int = Field(default=120, ge=1, le=1800)
+    allowed_commands: set[str] = Field(default_factory=set)
+    semantic_model_path: str = ""
     logging_dir: Path = Field(default=Path(".workspace_mcp/logs"))
+    index_dir: Path = Field(default=Path(".workspace_mcp/index"))
+    memory_dir: Path = Field(default=Path(".workspace_mcp/memory"))
+    sync_dir: Path = Field(default=Path(".workspace_mcp/sync"))
     backup_dir: Path = Field(default=Path(".workspace_mcp/backups"))
     templates_dir: Path = Field(default=Path(".workspace_mcp/templates"))
 
@@ -99,7 +110,7 @@ class WorkspaceSettings(BaseSettings):
         }
     )
 
-    @field_validator("workspace_root", "logging_dir", "backup_dir", "templates_dir", mode="before")
+    @field_validator("workspace_root", "logging_dir", "backup_dir", "templates_dir", "index_dir", "memory_dir", "sync_dir", mode="before")
     @classmethod
     def _expand(cls, v: Any) -> Any:
         if isinstance(v, str):
@@ -107,6 +118,15 @@ class WorkspaceSettings(BaseSettings):
         if isinstance(v, Path):
             return Path(os.path.expandvars(str(v))).expanduser()
         return v
+
+    def resolved_index_dir(self) -> Path:
+        return self._resolve_under_root(self.index_dir)
+
+    def resolved_memory_dir(self) -> Path:
+        return self._resolve_under_root(self.memory_dir)
+
+    def resolved_sync_dir(self) -> Path:
+        return self._resolve_under_root(self.sync_dir)
 
     def resolved_logging_dir(self) -> Path:
         return self._resolve_under_root(self.logging_dir)
@@ -118,7 +138,11 @@ class WorkspaceSettings(BaseSettings):
         return self._resolve_under_root(self.templates_dir)
 
     def _resolve_under_root(self, p: Path) -> Path:
-        return p if p.is_absolute() else (self.workspace_root / p)
+        root = self.workspace_root.resolve()
+        resolved = (p if p.is_absolute() else root / p).resolve()
+        if not resolved.is_relative_to(root):
+            raise ValueError("Server support directory must be inside workspace root.")
+        return resolved
 
     def ensure_directories(self) -> None:
         """Create workspace root and all support directories if missing."""
@@ -127,6 +151,9 @@ class WorkspaceSettings(BaseSettings):
             self.resolved_logging_dir(),
             self.resolved_backup_dir(),
             self.resolved_templates_dir(),
+            self.resolved_index_dir(),
+            self.resolved_memory_dir(),
+            self.resolved_sync_dir(),
         ):
             d.mkdir(parents=True, exist_ok=True)
 

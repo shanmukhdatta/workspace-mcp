@@ -19,6 +19,7 @@ from workspace_mcp.models.schemas import (
 )
 from workspace_mcp.services.directory_service import DirectoryService
 from workspace_mcp.services.doc_service import DocService
+from workspace_mcp.services.template_service import TemplateService
 from workspace_mcp.utils.pathsec import PathValidator, sanitize_project_name
 
 DEFAULT_STRUCTURE: list[str] = [
@@ -97,8 +98,22 @@ class ProjectService:
         structure: Optional[list[str]] = None,
         description: str = "",
         include_docker: bool = True,
+        template: Optional[str] = None,
+        template_variables: Optional[dict[str, str]] = None,
     ) -> ProjectInfo:
         sanitize_project_name(name)
+        if template:
+            template_result = TemplateService(self.settings, self.validator).create(
+                name, template, template_variables
+            )
+            from datetime import datetime, timezone
+            dest = self.validator.resolve(name)
+            return ProjectInfo(
+                name=name,
+                path=name,
+                created=datetime.now(timezone.utc).isoformat(),
+                structure=[p.name for p in dest.iterdir() if p.is_dir()],
+            )
         project_path = self.validator.resolve(name)
         if project_path.exists():
             raise AlreadyExistsError(
