@@ -269,3 +269,35 @@ Settings can be specified via command-line flags or environment variables (`WORK
 ## 📜 License ⚖️
 
 Distributed under the [MIT License](LICENSE).
+
+---
+
+## 🧩 Extension branch — Roadmap capabilities
+
+The [extension branch](https://github.com/shanmukhdatta/workspace-mcp/tree/extension)
+contains additional tools built on the original Phase 1 service architecture.
+They are under review in [PR #1](https://github.com/shanmukhdatta/workspace-mcp/pull/1);
+the stable `main` release is unchanged until that PR is approved.
+
+- **Commands:** `run_command` uses async subprocesses, an allowlist, timeouts
+  and bounded output. Requires `WORKSPACE_MCP_ENABLE_TERMINAL=true` and a
+  trusted workspace; a subprocess is **not** an OS sandbox.
+- **Git:** `git_init`, `git_status`, `git_branch`, `git_diff`, `git_log`,
+  `git_commit`; local operations only, disabled until
+  `WORKSPACE_MCP_ENABLE_GIT=true`.
+- **Recovery:** `list_backups` and `restore_backup` restore automatic file
+  snapshots taken before mutations.
+- **Scaffolds:** `list_templates` and optional `create_project(template=...)`
+  support FastAPI/React, Next.js/Tailwind, Rust, and local text templates.
+- **Code search:** `index_project`, `search_code`, and
+  `workspace-mcp index MyProject`. Reports **lexical** by default; optional
+  local embedding models enable **semantic** similarity.
+- **Memory and collaboration:** `remember_fact`, `link_facts`,
+  `query_memory`, `agent_submit`, `agent_claim`, `agent_finish`,
+  `agent_tasks`, and `sync_events` for durable project context, agent
+  task handoffs, and polling synchronization.
+
+Review [ROADMAP.md](ROADMAP.md) and
+[docs/EXTENSION_SECURITY.md](docs/EXTENSION_SECURITY.md) before use.
+Autonomous model execution, billion-scale vector search, and full
+bidirectional live IDE synchronization are **not** claimed as completed.
