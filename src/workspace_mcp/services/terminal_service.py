@@ -52,6 +52,7 @@ class TerminalService:
         ):
             raise WorkspaceError("npm script execution/configuration requires an external sandbox.")
         path = self.validator.resolve(cwd)
+        self.validator.assert_not_protected(path)
         if not path.is_dir() or path == self.validator.workspace_root:
             raise WorkspaceError(
                 "Command cwd must be an existing project directory, not the workspace root."
