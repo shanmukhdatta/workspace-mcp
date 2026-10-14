@@ -24,6 +24,7 @@ class MemoryService:
 
     def _validate_project(self, project: str) -> None:
         path = self.validator.resolve(project)
+        self.validator.assert_not_protected(path)
         if path.parent != self.validator.workspace_root or not path.is_dir():
             raise WorkspaceError("Memory project must be an existing top-level project.")
 
