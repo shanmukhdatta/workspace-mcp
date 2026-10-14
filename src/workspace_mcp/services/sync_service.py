@@ -20,7 +20,7 @@ class SyncService:
     def poll(self, cursor: int = 0, limit: int = 50) -> dict:
         if cursor < 0 or not 1 <= limit <= 200:
             raise WorkspaceError("Invalid cursor or limit.")
-        events = []
+        events: list[dict] = []
         end = cursor
         if not self.audit.exists():
             return {"cursor": end, "events": events}

@@ -79,7 +79,7 @@ class IndexService:
         if not 1 <= max_files <= 100000:
             raise WorkspaceError("max_files must be between 1 and 100000.")
         model = self._model()
-        visited = set()
+        visited: set[str] = set()
         updated = 0
         skipped = 0
         with self._connect() as db:
