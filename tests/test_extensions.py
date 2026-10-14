@@ -144,3 +144,29 @@ def test_sync_polling(settings):
     assert len(first["events"]) == 1
     assert first["cursor"] > 0
     assert sync.poll(first["cursor"])["events"] == []
+
+
+def test_server_private_area_cannot_be_targeted(settings, validator, directory_service, project_service, doc_service):
+    private = ".workspace_mcp"
+    services = (
+        lambda: directory_service.create_directory(private + "/overwrite"),
+        lambda: project_service.delete_project(private, confirm=True),
+        lambda: project_service.rename_project(private, "moved"),
+        lambda: doc_service.generate_readme(private),
+        lambda: IndexService(settings, validator).index(private),
+        lambda: MemoryService(settings, validator).remember(private, "note", "x", "y"),
+        lambda: AgentService(settings, validator).submit(private, "tester", "Do work"),
+    )
+    for operation in services:
+        with pytest.raises(WorkspaceError):
+            operation()
+    assert settings.resolved_memory_dir().is_dir()
+
+
+def test_protected_destination_fails(file_service):
+    file_service.create_file("safe.txt", "safe")
+    with pytest.raises(WorkspaceError):
+        file_service.move_file("safe.txt", ".workspace_mcp/logs/unsafe.txt")
+    with pytest.raises(WorkspaceError):
+        file_service.rename_file("safe.txt", "workspace_mcp.config.json")
+    assert file_service.read_file("safe.txt")[0] == "safe"
