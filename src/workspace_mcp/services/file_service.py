@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from workspace_mcp.config.settings import WorkspaceSettings
+from workspace_mcp.services.backup_service import BackupService
 from workspace_mcp.models.schemas import (
     AlreadyExistsError,
     ConfirmationRequiredError,
@@ -25,6 +26,11 @@ class FileService:
     def __init__(self, settings: WorkspaceSettings, validator: PathValidator) -> None:
         self.settings = settings
         self.validator = validator
+        self.backups = BackupService(settings, validator)
+
+    def _backup(self, path: Path) -> None:
+        if self.settings.enable_backups and path.is_file():
+            self.backups.snapshot(path)
 
     # ------------------------------------------------------------------ #
 
@@ -82,6 +88,7 @@ class FileService:
             )
         self._check_extension(path)
         self._check_size(content)
+        self._backup(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         return self._info(path)
@@ -104,11 +111,7 @@ class FileService:
         """Full overwrite of a file's contents (creates it if missing)."""
         path = self.validator.resolve(rel_path)
         self.validator.assert_not_protected(path)
-        if (
-            path.exists()
-            and self.settings.require_overwrite_confirmation
-            and not confirm
-        ):
+        if path.exists() and self.settings.require_overwrite_confirmation and not confirm:
             raise ConfirmationRequiredError(
                 f"'{rel_path}' already exists. Pass confirm=True to "
                 "overwrite it (this replaces the entire file content).",
@@ -116,6 +119,7 @@ class FileService:
             )
         self._check_extension(path)
         self._check_size(content)
+        self._backup(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         return self._info(path)
@@ -125,13 +129,13 @@ class FileService:
         self.validator.assert_not_protected(path)
         if not path.exists():
             raise NotFoundError(
-                f"Cannot append: no file exists at '{rel_path}'. Use "
-                "create_file first.",
+                f"Cannot append: no file exists at '{rel_path}'. Use " "create_file first.",
                 path=rel_path,
             )
         self._check_extension(path)
         existing = path.read_text(encoding="utf-8")
         self._check_size(existing + content)
+        self._backup(path)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(content)
         return self._info(path)
@@ -173,6 +177,7 @@ class FileService:
             )
 
         self._check_size(updated)
+        self._backup(path)
         path.write_text(updated, encoding="utf-8")
         return self._info(path)
 
@@ -180,13 +185,13 @@ class FileService:
         src = self.validator.resolve(src_rel)
         dest = self.validator.resolve(dest_rel)
         self.validator.assert_not_protected(src)
+        self.validator.assert_not_protected(dest)
         if not src.exists():
             raise NotFoundError(f"No file found at '{src_rel}'.", path=src_rel)
         if dest.exists() and not overwrite:
-            raise DuplicateFileError(
-                f"Destination '{dest_rel}' already exists.", path=dest_rel
-            )
+            raise DuplicateFileError(f"Destination '{dest_rel}' already exists.", path=dest_rel)
         self._check_extension(dest)
+        self._backup(dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
         src.replace(dest)
         return self._info(dest)
@@ -199,8 +204,12 @@ class FileService:
             raise NotFoundError(f"No file found at '{rel_path}'.", path=rel_path)
         dest = src.with_name(new_name)
         self.validator.resolve(str(dest.relative_to(self.validator.workspace_root)))
+        self.validator.assert_not_protected(dest)
         if dest.exists() and not overwrite:
-            raise DuplicateFileError(f"'{new_name}' already exists in that directory.", path=new_name)
+            raise DuplicateFileError(
+                f"'{new_name}' already exists in that directory.", path=new_name
+            )
+        self._backup(dest)
         src.replace(dest)
         return self._info(dest)
 
@@ -213,5 +222,6 @@ class FileService:
             raise ConfirmationRequiredError(
                 f"Deleting '{rel_path}' requires confirm=True.", path=rel_path
             )
+        self._backup(path)
         path.unlink()
         return self.validator.relative_to_root(path)

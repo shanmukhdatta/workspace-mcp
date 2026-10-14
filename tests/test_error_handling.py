@@ -76,9 +76,7 @@ class TestErrorEnvelope:
     @pytest.mark.asyncio
     async def test_unsupported_extension_returns_structured_error(self, mcp):
         await _call(mcp, "create_project", {"name": "Demo"})
-        result = await _call(
-            mcp, "create_file", {"path": "Demo/virus.exe", "content": "MZ"}
-        )
+        result = await _call(mcp, "create_file", {"path": "Demo/virus.exe", "content": "MZ"})
         assert result["status"] == "error"
         assert result["error_code"] == "UNSUPPORTED_EXTENSION"
 

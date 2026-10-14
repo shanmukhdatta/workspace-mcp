@@ -58,6 +58,7 @@ class DocService:
 
     def generate_project_tree(self, project_rel_path: str) -> str:
         project_path = self.validator.resolve(project_rel_path)
+        self.validator.assert_not_protected(project_path)
         if not project_path.exists() or not project_path.is_dir():
             raise NotFoundError(
                 f"No project directory found at '{project_rel_path}'.", path=project_rel_path
@@ -93,6 +94,7 @@ class DocService:
         license_name: str = "MIT",
     ) -> str:
         project_path = self.validator.resolve(project_rel_path)
+        self.validator.assert_not_protected(project_path)
         if not project_path.exists() or not project_path.is_dir():
             raise NotFoundError(
                 f"No project directory found at '{project_rel_path}'.", path=project_rel_path
@@ -178,6 +180,7 @@ class DocService:
         entries: Optional[list[CloudLogEntry]] = None,
     ) -> str:
         project_path = self.validator.resolve(project_rel_path)
+        self.validator.assert_not_protected(project_path)
         if not project_path.exists() or not project_path.is_dir():
             raise NotFoundError(
                 f"No project directory found at '{project_rel_path}'.", path=project_rel_path

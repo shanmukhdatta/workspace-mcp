@@ -116,6 +116,4 @@ class TestSanitizeName:
 class TestRelativeToRoot:
     def test_relative_to_root_roundtrip(self, validator: PathValidator):
         resolved = validator.resolve("MyApp/backend/main.py")
-        assert validator.relative_to_root(resolved) == os.path.join(
-            "MyApp", "backend", "main.py"
-        )
+        assert validator.relative_to_root(resolved) == os.path.join("MyApp", "backend", "main.py")

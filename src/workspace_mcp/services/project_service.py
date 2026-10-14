@@ -19,6 +19,7 @@ from workspace_mcp.models.schemas import (
 )
 from workspace_mcp.services.directory_service import DirectoryService
 from workspace_mcp.services.doc_service import DocService
+from workspace_mcp.services.template_service import TemplateService
 from workspace_mcp.utils.pathsec import PathValidator, sanitize_project_name
 
 DEFAULT_STRUCTURE: list[str] = [
@@ -97,9 +98,25 @@ class ProjectService:
         structure: Optional[list[str]] = None,
         description: str = "",
         include_docker: bool = True,
+        template: Optional[str] = None,
+        template_variables: Optional[dict[str, str]] = None,
     ) -> ProjectInfo:
         sanitize_project_name(name)
+        if template:
+            TemplateService(self.settings, self.validator).create(
+                name, template, template_variables
+            )
+            from datetime import datetime, timezone
+
+            dest = self.validator.resolve(name)
+            return ProjectInfo(
+                name=name,
+                path=name,
+                created=datetime.now(timezone.utc).isoformat(),
+                structure=[p.name for p in dest.iterdir() if p.is_dir()],
+            )
         project_path = self.validator.resolve(name)
+        self.validator.assert_not_protected(project_path)
         if project_path.exists():
             raise AlreadyExistsError(
                 f"A project named '{name}' already exists in the workspace.", path=name
@@ -113,7 +130,9 @@ class ProjectService:
         (project_path / ".gitignore").write_text(_GITIGNORE_TEMPLATE, encoding="utf-8")
         if include_docker:
             (project_path / "Dockerfile").write_text(_DOCKERFILE_TEMPLATE, encoding="utf-8")
-            (project_path / "docker-compose.yml").write_text(_DOCKER_COMPOSE_TEMPLATE, encoding="utf-8")
+            (project_path / "docker-compose.yml").write_text(
+                _DOCKER_COMPOSE_TEMPLATE, encoding="utf-8"
+            )
 
         self.docs.generate_project_tree(name)
         self.docs.generate_readme(name, description=description, tech_stack=folders)
@@ -138,6 +157,7 @@ class ProjectService:
     def delete_project(self, name: str, *, confirm: bool = False) -> str:
         sanitize_project_name(name)
         project_path = self.validator.resolve(name)
+        self.validator.assert_not_protected(project_path)
         if not project_path.exists() or not project_path.is_dir():
             raise NotFoundError(f"No project named '{name}' exists.", path=name)
         if not confirm:
@@ -149,23 +169,27 @@ class ProjectService:
         shutil.rmtree(project_path)
         return name
 
-    def rename_project(self, old_name: str, new_name: str, *, overwrite: bool = False) -> ProjectInfo:
+    def rename_project(
+        self, old_name: str, new_name: str, *, overwrite: bool = False
+    ) -> ProjectInfo:
         sanitize_project_name(old_name)
         sanitize_project_name(new_name)
         src = self.validator.resolve(old_name)
         dest = self.validator.resolve(new_name)
+        self.validator.assert_not_protected(src)
+        self.validator.assert_not_protected(dest)
         if not src.exists() or not src.is_dir():
             raise NotFoundError(f"No project named '{old_name}' exists.", path=old_name)
         if dest.exists() and not overwrite:
-            raise AlreadyExistsError(
-                f"A project named '{new_name}' already exists.", path=new_name
-            )
+            raise AlreadyExistsError(f"A project named '{new_name}' already exists.", path=new_name)
         src.replace(dest)
 
         from datetime import datetime, timezone
 
         structure = [
-            p.name for p in dest.iterdir() if p.is_dir() and p.name not in self.settings.ignored_dirs
+            p.name
+            for p in dest.iterdir()
+            if p.is_dir() and p.name not in self.settings.ignored_dirs
         ]
         return ProjectInfo(
             name=new_name,

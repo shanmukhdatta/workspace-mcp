@@ -22,7 +22,9 @@ class SearchService:
     def _is_ignored(self, path: Path) -> bool:
         return any(part in self.settings.ignored_dirs for part in path.parts)
 
-    def search_files(self, pattern: str, rel_root: str = ".", *, max_results: int = 200) -> list[str]:
+    def search_files(
+        self, pattern: str, rel_root: str = ".", *, max_results: int = 200
+    ) -> list[str]:
         """Glob search for filenames matching ``pattern`` (e.g. ``"*.py"``)."""
         root = self.validator.resolve(rel_root)
         if not root.exists() or not root.is_dir():
@@ -53,7 +55,11 @@ class SearchService:
         if not root.exists() or not root.is_dir():
             raise NotFoundError(f"No directory found at '{rel_root}'.", path=rel_root)
 
-        ext_filter = {e.lower() if e.startswith(".") else f".{e.lower()}" for e in extensions} if extensions else None
+        ext_filter = (
+            {e.lower() if e.startswith(".") else f".{e.lower()}" for e in extensions}
+            if extensions
+            else None
+        )
         needle = query if case_sensitive else query.lower()
 
         matches: list[SearchMatch] = []

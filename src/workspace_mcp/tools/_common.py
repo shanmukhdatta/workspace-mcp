@@ -69,3 +69,30 @@ def run_tool(
         "duration_ms": timer.elapsed_ms(),
         "data": _jsonable(result),
     }
+
+
+async def run_tool_async(
+    logger: OperationLogger, *, operation: str, target_path: str, fn: Callable[[], Any]
+) -> dict[str, Any]:
+    """Async version for non-blocking process execution."""
+    timer = Timer()
+    try:
+        with logger.track(operation, target_path):
+            result = await fn()
+    except WorkspaceError as exc:
+        return {
+            "status": OperationStatus.ERROR.value,
+            "operation": operation,
+            "target_path": target_path,
+            "message": exc.message,
+            "error_code": exc.code,
+            "duration_ms": timer.elapsed_ms(),
+            **{k: _jsonable(v) for k, v in exc.details.items()},
+        }
+    return {
+        "status": OperationStatus.SUCCESS.value,
+        "operation": operation,
+        "target_path": target_path,
+        "duration_ms": timer.elapsed_ms(),
+        "data": _jsonable(result),
+    }

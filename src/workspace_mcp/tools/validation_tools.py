@@ -24,6 +24,7 @@ def register(
         directory, whether it exists/is writable, size limits, and
         allowed extensions.
         """
+
         def _do() -> dict[str, Any]:
             root = settings.workspace_root
             return {
@@ -53,6 +54,7 @@ def register(
         Args:
             path: Path to validate, relative to the workspace root.
         """
+
         def _do() -> dict[str, Any]:
             resolved = validator.resolve(path)
             return {

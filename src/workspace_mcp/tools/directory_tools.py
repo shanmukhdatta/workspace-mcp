@@ -28,7 +28,9 @@ def register(mcp: FastMCP, directory_service: DirectoryService, logger: Operatio
         )
 
     @mcp.tool()
-    def delete_directory(path: str, confirm: bool = False, recursive: bool = True) -> dict[str, Any]:
+    def delete_directory(
+        path: str, confirm: bool = False, recursive: bool = True
+    ) -> dict[str, Any]:
         """Delete a directory inside the workspace.
 
         Args:
@@ -41,7 +43,9 @@ def register(mcp: FastMCP, directory_service: DirectoryService, logger: Operatio
             logger,
             operation="Delete Directory",
             target_path=path,
-            fn=lambda: directory_service.delete_directory(path, confirm=confirm, recursive=recursive),
+            fn=lambda: directory_service.delete_directory(
+                path, confirm=confirm, recursive=recursive
+            ),
         )
 
     @mcp.tool()

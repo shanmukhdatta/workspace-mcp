@@ -16,7 +16,9 @@ class TestCreateDirectory:
         rel = directory_service.create_directory("a/b/c")
         assert rel.replace("\\", "/") == "a/b/c"
 
-    def test_create_directory_exist_ok_true_is_idempotent(self, directory_service: DirectoryService):
+    def test_create_directory_exist_ok_true_is_idempotent(
+        self, directory_service: DirectoryService
+    ):
         directory_service.create_directory("a")
         directory_service.create_directory("a")  # should not raise
 
