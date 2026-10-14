@@ -69,6 +69,7 @@ class BackupService:
                     result.append({"backup_id": folder.name, **data})
             except (OSError, KeyError, ValueError, TypeError):
                 continue
+        result.sort(key=lambda row: row["created_at"], reverse=True)
         return result
 
     def restore(self, backup_id: str, *, confirm: bool = False) -> str:
